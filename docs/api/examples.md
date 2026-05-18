@@ -6,16 +6,46 @@ Complete code examples for common workflows.
 
 ## Quick Start
 
-### 1. Get Token from OAuth
+### 1. Login with Google
 
+Using React (@react-oauth/google):
+```typescript
+import { GoogleLogin } from '@react-oauth/google';
+
+<GoogleLogin
+  onSuccess={async (credentialResponse) => {
+    // Send Google token to backend
+    const response = await fetch('http://localhost:3001/api/auth/verify-google', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: credentialResponse.credential })
+    });
+
+    const data = await response.json();
+    localStorage.setItem('auth_token', data.data.token);
+    console.log('Logged in as:', data.data.user.email);
+  }}
+/>
+```
+
+Or vanilla JavaScript:
 ```javascript
-// User clicks login button
-window.location.href = 'http://localhost:3001/api/auth/google';
+// Assuming you have a Google token from google-signin-js
+async function loginWithGoogle(googleToken) {
+  const response = await fetch('http://localhost:3001/api/auth/verify-google', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ token: googleToken })
+  });
 
-// After OAuth, redirect back to frontend with token in URL
-const params = new URLSearchParams(window.location.search);
-const token = params.get('token');
-localStorage.setItem('auth_token', token);
+  if (!response.ok) {
+    throw new Error('Login failed');
+  }
+
+  const data = await response.json();
+  localStorage.setItem('auth_token', data.data.token);
+  return data.data.user;
+}
 ```
 
 ---

@@ -1,27 +1,16 @@
 import { Queue, Worker } from 'bullmq';
-import { createRedisClient } from '../../shared/config/index.js';
 import { GenerationJob } from '../../shared/types/index.js';
 import { updateGenerationStatus } from './generation.service.js';
 import { enhancePrompt, generateImageBuffer } from './ai.service.js';
 import { saveImage, getImageUrl } from './image-storage.service.js';
 
-let redisClient: any;
-
-async function getRedisClient() {
-  if (!redisClient) {
-    redisClient = await createRedisClient();
-  }
-  return redisClient;
-}
+const redisUrl = process.env.REDIS_URL || 'redis://localhost:6379';
 
 export async function createQueue() {
-  const client = await getRedisClient();
-  return new Queue<GenerationJob>('image-generation', { connection: client });
+  return new Queue<GenerationJob>('image-generation', { connection: { url: redisUrl } });
 }
 
 export async function startWorker() {
-  const client = await getRedisClient();
-
   const worker = new Worker<GenerationJob>(
     'image-generation',
     async (job) => {
@@ -58,7 +47,7 @@ export async function startWorker() {
         throw error;
       }
     },
-    { connection: client }
+    { connection: { url: redisUrl } }
   );
 
   worker.on('completed', (job) => {

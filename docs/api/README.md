@@ -4,28 +4,40 @@ Complete REST API documentation for RoomVision AI backend.
 
 ---
 
-## Getting Started
+## 🚀 Getting Started
 
-1. **Start here**: [API Overview](./overview.md) — Base URLs, authentication, and key concepts
-2. **Learn by doing**: [Examples](./examples.md) — Complete code examples and workflows
-3. **Deep dive**: Choose a topic below
+### For Quick Setup
+👉 **[QUICK_START.md](./QUICK_START.md)** — Get backend running in 5 minutes + test all endpoints
+
+### For Complete Understanding
+1. **[API Overview](./overview.md)** — Base URLs, authentication, and key concepts
+2. **[Examples](./examples.md)** — Complete code examples and workflows
+3. **Choose a topic** from the documentation files below
 
 ---
 
-## Documentation Files
+## 📚 Documentation Index
 
-### Core
-- **[overview.md](./overview.md)** — API intro, authentication, status codes, workflow diagrams
-- **[examples.md](./examples.md)** — Curl, JavaScript, React components, complete examples
-- **[models.md](./models.md)** — Data structures, fields, relationships, MongoDB schema
+### 🎯 Getting Started
+- **[QUICK_START.md](./QUICK_START.md)** ⭐ — Setup in 5 minutes, test all endpoints
+- **[overview.md](./overview.md)** — API intro, authentication, status codes, workflows
 
-### Endpoints by Feature
-- **[auth.md](./auth.md)** — Google OAuth, login, user profile, logout
-- **[generations.md](./generations.md)** — Create, list, get, regenerate, delete designs
-- **[images.md](./images.md)** — Serve generated images, storage, CDN setup
+### 📖 Core Documentation
+- **[examples.md](./examples.md)** — Code examples: Curl, JavaScript, React with full workflows
+- **[models.md](./models.md)** — Data structures, fields, MongoDB schema
+- **[errors.md](./errors.md)** — Error codes, debugging, solutions
 
-### Troubleshooting
-- **[errors.md](./errors.md)** — Error codes, debugging, common issues, solutions
+### 🔐 Authentication
+- **[auth.md](./auth.md)** — POST /verify-google, GET /me, POST /logout
+- **[AUTHENTICATION_UPDATE.md](./AUTHENTICATION_UPDATE.md)** — Why we changed OAuth, migration guide
+
+### 🎨 Image Generation
+- **[generations.md](./generations.md)** — POST/GET /generations, async flow
+- **[images.md](./images.md)** — Serving generated images, storage details
+- **[GENERATION_FLOW.md](./GENERATION_FLOW.md)** — Complete async flow, polling strategy, React example
+
+### 📋 Development & Review
+- **[SESSION_REVIEW_2026_05_18.md](./SESSION_REVIEW_2026_05_18.md)** — Complete session: changes, validation, architecture review
 
 ---
 
@@ -33,8 +45,10 @@ Complete REST API documentation for RoomVision AI backend.
 
 ### Authentication
 ```bash
-# Initiate Google OAuth
-GET /api/auth/google
+# Verify Google token → get app token
+POST /api/auth/verify-google
+Content-Type: application/json
+{ "token": "google_id_token" }
 
 # Get current user
 GET /api/auth/me

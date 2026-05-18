@@ -1,41 +1,5 @@
-import { Request, Response, NextFunction } from 'express';
-import { findOrCreateUser, generateToken, getUserById } from './auth.service.js';
-import { GoogleProfile } from './auth.types.js';
-
-export async function handleGoogleCallback(
-  req: Request,
-  res: Response,
-  next: NextFunction
-) {
-  try {
-    if (!req.user) {
-      const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
-      return res.redirect(`${frontendUrl}?error=auth_failed`);
-    }
-
-    const profile = req.user as any;
-    const googleProfile: GoogleProfile = {
-      id: profile.id,
-      displayName: profile.displayName,
-      emails: profile.emails || [],
-      photos: profile.photos || [],
-    };
-
-    const user = await findOrCreateUser(googleProfile);
-    const token = generateToken(
-      user._id.toString(),
-      user.email,
-      user.name
-    );
-
-    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
-    res.redirect(`${frontendUrl}?token=${encodeURIComponent(token)}`);
-  } catch (error) {
-    console.error('Error in Google callback:', error);
-    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
-    res.redirect(`${frontendUrl}?error=callback_failed`);
-  }
-}
+import { Request, Response } from 'express';
+import { getUserById, verifyAndCreateUserFromGoogleToken } from './auth.service.js';
 
 export async function getCurrentUser(req: Request, res: Response) {
   try {
@@ -65,4 +29,31 @@ export async function getCurrentUser(req: Request, res: Response) {
 
 export function logout(req: Request, res: Response) {
   res.json({ success: true });
+}
+
+export async function verifyGoogleToken(
+  req: Request<any, any, { token: string }>,
+  res: Response
+) {
+  try {
+    const { token } = req.body;
+
+    if (!token) {
+      return res.status(400).json({ error: 'Google token is required' });
+    }
+
+    const result = await verifyAndCreateUserFromGoogleToken(token);
+
+    res.json({
+      id: 'auth',
+      status: 'success',
+      data: {
+        token: result.token,
+        user: result.user,
+      },
+    });
+  } catch (error) {
+    console.error('Error verifying Google token:', error);
+    res.status(401).json({ error: 'Invalid or expired Google token' });
+  }
 }

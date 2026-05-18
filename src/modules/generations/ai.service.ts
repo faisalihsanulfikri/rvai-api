@@ -1,4 +1,4 @@
-import { GoogleGenerativeAI } from '@google-cloud/generative-ai';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 
 let geminiClient: GoogleGenerativeAI | null = null;
 
@@ -8,7 +8,7 @@ function getGeminiClient() {
     if (!apiKey) {
       throw new Error('GEMINI_API_KEY environment variable is not set');
     }
-    geminiClient = new GoogleGenerativeAI({ apiKey });
+    geminiClient = new GoogleGenerativeAI(apiKey);
   }
   return geminiClient;
 }
@@ -16,7 +16,7 @@ function getGeminiClient() {
 export async function enhancePrompt(prompt: string): Promise<string> {
   try {
     const client = getGeminiClient();
-    const model = client.getGenerativeModel({ model: 'gemini-2.0-flash' });
+    const model = client.getGenerativeModel({ model: 'gemini-2.5-flash' });
 
     const response = await model.generateContent(
       `You are an expert interior design AI assistant. Enhance this prompt for maximum visual clarity:\n"${prompt}"\n\nRespond with ONLY the enhanced prompt.`

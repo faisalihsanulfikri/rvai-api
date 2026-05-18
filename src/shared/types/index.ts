@@ -3,7 +3,7 @@ export type DesignStyle = 'minimalist' | 'modern' | 'industrial' | 'japandi';
 export type AspectRatio = '1:1' | '16:9' | '9:16' | '4:3';
 
 export interface User {
-  id: string;
+  _id?: any;
   googleId: string;
   email: string;
   name: string;
@@ -13,7 +13,7 @@ export interface User {
 }
 
 export interface Generation {
-  id: string;
+  _id?: any;
   userId: string;
   originalPrompt: string;
   finalPrompt: string;

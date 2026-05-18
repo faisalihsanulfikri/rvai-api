@@ -1,7 +1,7 @@
 import mongoose, { Schema, Document } from 'mongoose';
 import { Generation, GenerationStatus, DesignStyle, AspectRatio } from '../../shared/types/index.js';
 
-interface GenerationDocument extends Generation, Document {}
+export interface GenerationDocument extends Generation, Document {}
 
 const generationSchema = new Schema<GenerationDocument>(
   {

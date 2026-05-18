@@ -2,62 +2,86 @@
 
 Base path: `/api/auth`
 
-## Initiate Google OAuth
+## Verify Google Token
 
-Start the Google OAuth login flow.
+Exchange a Google ID token for an app authentication token.
 
 ```
-GET /api/auth/google
+POST /api/auth/verify-google
 ```
 
 **Authentication**: ❌ Not required
 
-**Description**: Initiates Google OAuth 2.0 authentication. Redirects user to Google login page.
+**Description**: Accepts a Google ID token (from Google Sign-In), verifies it, creates/updates the user in the database, and returns an app authentication token.
 
-**Response**: Redirects to Google OAuth consent screen
+**Request Body**:
+```json
+{
+  "token": "<google_id_token>"
+}
+```
+
+**Response** (200 OK):
+```json
+{
+  "id": "auth",
+  "status": "success",
+  "data": {
+    "token": "eyJ1c2VySWQiOiI1MDdmMWY3N2JjZjg2Y2Q3OTk0MzkwMTEiLCJlbWFpbCI6InVzZXJAZXhhbXBsZS5jb20iLCJuYW1lIjoiSm9obiBEb2UiLCJpYXQiOjE2ODczMTI3Mjh9",
+    "user": {
+      "id": "507f1f77bcf86cd799439011",
+      "email": "user@example.com",
+      "name": "John Doe",
+      "picture": "https://lh3.googleusercontent.com/..."
+    }
+  }
+}
+```
+
+**Status Codes**:
+- `200` - Success
+- `400` - Missing or invalid request body
+- `401` - Invalid or expired Google token
+- `500` - Server error
+
+**What happens**:
+1. Decodes the Google ID token
+2. Extracts user info (email, name, picture, Google ID)
+3. Creates new user or updates existing user in MongoDB
+4. Generates app authentication token (base64-encoded JSON)
+5. Returns token and user info
 
 **Example**:
-```html
-<a href="http://localhost:3001/api/auth/google">
-  Sign in with Google
-</a>
+```bash
+curl -X POST http://localhost:3001/api/auth/verify-google \
+  -H "Content-Type: application/json" \
+  -d '{
+    "token": "eyJhbGciOiJSUzI1NiIsImtpZCI6IjExIn0..."
+  }'
+```
+
+**JavaScript/TypeScript**:
+```typescript
+// After getting token from Google Sign-In library
+const response = await fetch('http://localhost:3001/api/auth/verify-google', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ token: googleToken })
+});
+
+const data = await response.json();
+if (response.ok) {
+  localStorage.setItem('auth_token', data.data.token);
+  console.log('Logged in as:', data.data.user.email);
+} else {
+  console.error('Login failed:', data.error);
+}
 ```
 
 **Notes**:
-- User will be prompted to authorize the app at Google
-- After authorization, Google redirects to `/api/auth/google/callback`
-- Callback redirects user back to frontend with token in URL
-
----
-
-## Google OAuth Callback
-
-Internal callback endpoint. Called by Google after user authorizes.
-
-```
-GET /api/auth/google/callback?code=...&state=...
-```
-
-**Authentication**: ❌ Not required (handled by Passport)
-
-**Description**: Receives authorization code from Google, exchanges for user info, creates/updates user in database, generates token, and redirects to frontend.
-
-**Response**: 
-```
-Location: http://localhost:3000?token=BASE64_TOKEN
-```
-
-**What happens**:
-1. Passport verifies code with Google
-2. Retrieves user profile (email, name, picture)
-3. Creates or updates user in MongoDB
-4. Generates base64 token
-5. Redirects to frontend with token in query parameter
-
-**On Error**:
-```
-Location: http://localhost:3000?error=callback_failed
-```
+- Google token should be obtained from Google Sign-In library on frontend
+- Tokens don't expire; frontend can store indefinitely
+- On next app launch, user is already logged in if token exists
 
 ---
 
@@ -200,70 +224,90 @@ See [errors.md](./errors.md) for detailed error documentation.
 
 ## Full Login Flow Example
 
-### 1. Frontend initiates login
-```html
-<a href="http://localhost:3001/api/auth/google">
-  Sign in with Google
-</a>
-```
-
-### 2. User authorizes at Google
-User sees Google consent screen and clicks "Allow"
-
-### 3. Browser redirected to callback
-```
-GET http://localhost:3001/api/auth/google/callback?code=...&state=...
-```
-
-### 4. Callback returns to frontend with token
-```
-Location: http://localhost:3000?token=eyJ1c2VySWQiOi4uLn0=
-```
-
-### 5. Frontend extracts token and stores it
+### 1. Frontend gets Google ID token
+Use Google Sign-In library (@react-oauth/google for React, google-signin for web):
 ```typescript
-const params = new URLSearchParams(window.location.search);
-const token = params.get('token');
-localStorage.setItem('auth_token', token);
+// React example with @react-oauth/google
+import { GoogleLogin } from '@react-oauth/google';
+
+<GoogleLogin
+  onSuccess={credentialResponse => {
+    const googleToken = credentialResponse.credential;
+    // Send to backend
+  }}
+  onError={() => console.log('Login Failed')}
+/>
 ```
 
-### 6. Use token in all requests
+Or vanilla JS with Google Sign-In:
+```html
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<div id="g_id_onload"
+     data-client_id="YOUR_CLIENT_ID"
+     data-callback="handleCredentialResponse">
+</div>
+<div class="g_id_signin" data-type="standard"></div>
+```
+
+### 2. Frontend sends token to backend
+```typescript
+const response = await fetch('http://localhost:3001/api/auth/verify-google', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ token: googleToken })
+});
+
+const data = await response.json();
+localStorage.setItem('auth_token', data.data.token);
+```
+
+### 3. Frontend uses app token for API calls
 ```typescript
 const token = localStorage.getItem('auth_token');
-fetch('http://localhost:3001/api/generations', {
+const response = await fetch('http://localhost:3001/api/generations', {
   headers: { Authorization: `Bearer ${token}` }
 });
 ```
 
-### 7. Get current user info
+### 4. Get current user info
 ```typescript
+const token = localStorage.getItem('auth_token');
 const user = await fetch('http://localhost:3001/api/auth/me', {
   headers: { Authorization: `Bearer ${token}` }
 }).then(r => r.json());
+console.log('User:', user);
 ```
 
-### 8. Logout
+### 5. Logout
 ```typescript
 localStorage.removeItem('auth_token');
+// Optional: notify backend
+await fetch('http://localhost:3001/api/auth/logout', {
+  method: 'POST',
+  headers: { Authorization: `Bearer ${token}` }
+});
 ```
 
 ---
 
 ## Google OAuth Configuration
 
-Required environment variables:
+Required environment variable:
 
 ```
-GOOGLE_CLIENT_ID=your_client_id_here
-GOOGLE_CLIENT_SECRET=your_client_secret_here
-GOOGLE_CALLBACK_URL=http://localhost:3001/api/auth/google/callback
+GEMINI_API_KEY=your_gemini_api_key
 ```
 
-**Get credentials**:
+**Frontend Configuration**:
 1. Go to [Google Cloud Console](https://console.cloud.google.com/)
 2. Create new OAuth 2.0 Web Application credentials
-3. Add redirect URI: `http://localhost:3001/api/auth/google/callback`
-4. Copy Client ID and Secret to `.env`
+3. Add authorized JavaScript origins:
+   - `http://localhost:3000` (development)
+   - `https://yourdomain.com` (production)
+4. Copy Client ID to frontend `.env`
+5. Use Google Sign-In library in your frontend app
+
+**No backend OAuth configuration needed** - Google token validation happens via JWT decoding
 
 ---
 

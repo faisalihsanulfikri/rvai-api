@@ -4,6 +4,16 @@ Base path: `/api/generations`
 
 All endpoints require authentication.
 
+## ⚠️ Important: Asynchronous Processing
+
+Image generation is **asynchronous** and uses a background job queue:
+- `POST /api/generations` returns immediately with status `"pending"`
+- Backend processes the job in the background (10-30 seconds)
+- Frontend **must poll** `GET /api/generations/:id` to check status
+- When status = `"success"`, the image is ready
+
+**See [GENERATION_FLOW.md](./GENERATION_FLOW.md) for complete async flow diagram and implementation guide.**
+
 ---
 
 ## Create Generation

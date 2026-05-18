@@ -1,8 +1,6 @@
 import express from 'express';
 import cors from 'cors';
-import session from 'express-session';
-import passport from 'passport';
-import { createGoogleStrategy, authRouter } from './modules/auth/index.js';
+import { authRouter } from './modules/auth/index.js';
 import { generationRouter } from './modules/generations/index.js';
 import { imageRouter } from './modules/images/index.js';
 
@@ -18,27 +16,6 @@ export function createApp() {
       credentials: true,
     })
   );
-
-  app.use(
-    session({
-      secret: process.env.SESSION_SECRET || 'your-secret-key-change-in-production',
-      resave: false,
-      saveUninitialized: false,
-      cookie: { secure: process.env.NODE_ENV === 'production', httpOnly: true },
-    })
-  );
-
-  // Passport setup
-  passport.use(createGoogleStrategy());
-  passport.serializeUser((user: any, done) => {
-    done(null, user);
-  });
-  passport.deserializeUser((user: any, done) => {
-    done(null, user);
-  });
-
-  app.use(passport.initialize());
-  app.use(passport.session());
 
   // Health check
   app.get('/health', (req, res) => {

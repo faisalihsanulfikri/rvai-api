@@ -40,9 +40,9 @@ Authorization: Bearer <token>
 ```
 
 **Get Token**:
-1. Visit `GET /api/auth/google` to initiate OAuth
-2. User authorizes at Google
-3. Redirected to frontend with token in URL: `?token=<token>`
+1. Frontend gets Google ID token from Google Sign-In library
+2. Send token to `POST /api/auth/verify-google`
+3. Backend validates and returns app token
 4. Frontend stores token in localStorage
 5. Include in all subsequent requests
 
@@ -55,6 +55,8 @@ Authorization: Bearer <token>
   "iat": 1234567890
 }
 ```
+
+**See [auth.md](./auth.md) for full authentication details**
 
 ## Response Format
 
@@ -116,8 +118,7 @@ CORS is enabled for the frontend origin specified in `FRONTEND_URL` environment 
 
 | Module | Endpoint | Method | Auth | Purpose |
 |--------|----------|--------|------|---------|
-| **Auth** | `/api/auth/google` | GET | ❌ | Initiate Google OAuth |
-| | `/api/auth/google/callback` | GET | ❌ | OAuth callback (internal) |
+| **Auth** | `/api/auth/verify-google` | POST | ❌ | Verify Google token → get app token |
 | | `/api/auth/me` | GET | ✅ | Get current user |
 | | `/api/auth/logout` | POST | ✅ | Logout user |
 | **Generations** | `/api/generations` | POST | ✅ | Create generation |
@@ -134,21 +135,21 @@ CORS is enabled for the frontend origin specified in `FRONTEND_URL` environment 
 ```
 User clicks "Sign in with Google"
     ↓
-GET /api/auth/google
+Google Sign-In library handles OAuth flow
     ↓
-Passport redirects to Google OAuth
+User authorizes app at Google (in popup/modal)
     ↓
-User authorizes app at Google
+Google returns ID token to frontend
     ↓
-Google redirects to /api/auth/google/callback
+Frontend sends token to POST /api/auth/verify-google
     ↓
-App creates/updates user in MongoDB
+Backend validates token & creates/updates user in MongoDB
     ↓
-App generates token
+Backend generates app token
     ↓
-Redirects to frontend with ?token=...
+Frontend receives token → stores in localStorage
     ↓
-Frontend extracts token → stores in localStorage
+User is logged in, can use app token for all requests
 ```
 
 ### 2. Generate Image
@@ -288,12 +289,10 @@ FRONTEND_URL=http://localhost:3000
 MONGODB_URI=mongodb://localhost:27017/roomvision-ai
 REDIS_URL=redis://localhost:6379
 GEMINI_API_KEY=xxx
-GOOGLE_CLIENT_ID=xxx
-GOOGLE_CLIENT_SECRET=xxx
-GOOGLE_CALLBACK_URL=http://localhost:3001/api/auth/google/callback
 IMAGE_STORAGE_PATH=./uploads/images
-SESSION_SECRET=your-secret-key
 ```
+
+**Note**: Google OAuth configuration is now handled entirely on the frontend using Google Sign-In libraries.
 
 ## Rate Limits (Future)
 

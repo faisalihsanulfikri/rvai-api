@@ -1,3 +1,4 @@
+import { decode } from 'jsonwebtoken';
 import { UserModel } from './user.model.js';
 import { GoogleProfile, AuthToken } from './auth.types.js';
 
@@ -39,4 +40,32 @@ export function generateToken(userId: string, email: string, name: string): stri
 
 export async function getUserById(id: string) {
   return UserModel.findById(id).select('-__v');
+}
+
+export async function verifyAndCreateUserFromGoogleToken(googleToken: string) {
+  const decoded = decode(googleToken) as any;
+
+  if (!decoded) {
+    throw new Error('Invalid Google token');
+  }
+
+  const googleProfile: GoogleProfile = {
+    id: decoded.sub,
+    displayName: decoded.name || 'User',
+    emails: [{ value: decoded.email }],
+    photos: decoded.picture ? [{ value: decoded.picture }] : [],
+  };
+
+  const user = await findOrCreateUser(googleProfile);
+  const token = generateToken(user._id.toString(), user.email, user.name);
+
+  return {
+    token,
+    user: {
+      id: user._id,
+      email: user.email,
+      name: user.name,
+      picture: user.picture,
+    },
+  };
 }
