@@ -1,0 +1,41 @@
+import fs from 'fs/promises';
+import path from 'path';
+import { v4 as uuidv4 } from 'uuid';
+
+const IMAGE_STORAGE_PATH = process.env.IMAGE_STORAGE_PATH || './uploads/images';
+
+export async function initializeStorage() {
+  try {
+    await fs.mkdir(IMAGE_STORAGE_PATH, { recursive: true });
+  } catch (error) {
+    console.error('Failed to create image storage directory:', error);
+  }
+}
+
+export async function saveImage(imageBuffer: Buffer, filename?: string): Promise<string> {
+  const uniqueFilename = filename || `${uuidv4()}.jpg`;
+  const filepath = path.join(IMAGE_STORAGE_PATH, uniqueFilename);
+
+  await fs.writeFile(filepath, imageBuffer);
+  return uniqueFilename;
+}
+
+export async function deleteImage(filename: string): Promise<void> {
+  const filepath = path.join(IMAGE_STORAGE_PATH, filename);
+
+  try {
+    await fs.unlink(filepath);
+  } catch (error) {
+    console.warn(`Failed to delete image ${filename}:`, error);
+  }
+}
+
+export function getImageUrl(filename: string): string {
+  const baseUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+  return `${baseUrl}/api/images/${filename}`;
+}
+
+export async function getImageBuffer(filename: string): Promise<Buffer> {
+  const filepath = path.join(IMAGE_STORAGE_PATH, filename);
+  return fs.readFile(filepath);
+}

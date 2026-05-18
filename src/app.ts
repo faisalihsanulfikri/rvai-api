@@ -1,0 +1,62 @@
+import express from 'express';
+import cors from 'cors';
+import session from 'express-session';
+import passport from 'passport';
+import { createGoogleStrategy, authRouter } from './modules/auth/index.js';
+import { generationRouter } from './modules/generations/index.js';
+import { imageRouter } from './modules/images/index.js';
+
+export function createApp() {
+  const app = express();
+
+  // Middleware
+  app.use(express.json());
+  app.use(express.urlencoded({ extended: true }));
+  app.use(
+    cors({
+      origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+      credentials: true,
+    })
+  );
+
+  app.use(
+    session({
+      secret: process.env.SESSION_SECRET || 'your-secret-key-change-in-production',
+      resave: false,
+      saveUninitialized: false,
+      cookie: { secure: process.env.NODE_ENV === 'production', httpOnly: true },
+    })
+  );
+
+  // Passport setup
+  passport.use(createGoogleStrategy());
+  passport.serializeUser((user: any, done) => {
+    done(null, user);
+  });
+  passport.deserializeUser((user: any, done) => {
+    done(null, user);
+  });
+
+  app.use(passport.initialize());
+  app.use(passport.session());
+
+  // Health check
+  app.get('/health', (req, res) => {
+    res.json({ status: 'ok' });
+  });
+
+  // Module routes
+  app.use('/api/auth', authRouter);
+  app.use('/api/generations', generationRouter);
+  app.use('/api/images', imageRouter);
+
+  // Error handler
+  app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+    console.error('Unhandled error:', err);
+    res.status(err.status || 500).json({
+      error: err.message || 'Internal server error',
+    });
+  });
+
+  return app;
+}
