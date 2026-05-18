@@ -30,7 +30,9 @@ docs/api/
 │  └── GENERATION_FLOW.md            # Complete async flow guide
 │
 └── SESSION & REVIEWS
-   ├── SESSION_REVIEW_2026_05_18.md  # This session's work
+   ├── SESSION_REVIEW_2026_05_18.md  # Auth refactor session
+   ├── SESSION_REVIEW_2026_05_19.md  # Worker fix + URL update + prompt removal
+   ├── WORKER_FIX.md                 # BullMQ worker fix details
    └── INDEX.md                      # This file
 ```
 
@@ -63,11 +65,14 @@ docs/api/
 4. **[SESSION_REVIEW_2026_05_18.md](./SESSION_REVIEW_2026_05_18.md)** — Architecture details
 
 ### "I want to know what changed"
+👉 **[SESSION_REVIEW_2026_05_19.md](./SESSION_REVIEW_2026_05_19.md)** (Latest)
+- BullMQ worker fix
+- Backend public URL for images
+- Removed prompt enhancement
+
 👉 **[SESSION_REVIEW_2026_05_18.md](./SESSION_REVIEW_2026_05_18.md)**
-- What was changed
-- Why changes were made
-- Files affected
-- Code quality review
+- Auth refactor (OAuth → verify-google)
+- Documentation overhaul
 
 ### "I need to set up the frontend"
 1. **[AUTHENTICATION_UPDATE.md](./AUTHENTICATION_UPDATE.md)** — Auth architecture
