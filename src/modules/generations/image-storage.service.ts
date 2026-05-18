@@ -31,7 +31,7 @@ export async function deleteImage(filename: string): Promise<void> {
 }
 
 export function getImageUrl(filename: string): string {
-  const baseUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+  const baseUrl = process.env.BACKEND_PUBLIC_URL || process.env.BACKEND_URL || 'http://localhost:3001';
   return `${baseUrl}/api/images/${filename}`;
 }
 
