@@ -1,7 +1,7 @@
 import { Queue, Worker } from 'bullmq';
 import { GenerationJob } from '../../shared/types/index.js';
 import { updateGenerationStatus } from './generation.service.js';
-import { enhancePrompt, generateImageBuffer } from './ai.service.js';
+import { generateImageBuffer } from './ai.service.js';
 import { saveImage, getImageUrl } from './image-storage.service.js';
 
 const redisUrl = process.env.REDIS_URL || 'redis://localhost:6379';
@@ -19,14 +19,13 @@ export async function startWorker() {
       try {
         await updateGenerationStatus(generationId, { status: 'processing' });
 
-        const finalPrompt = await enhancePrompt(originalPrompt);
-        const imageBuffer = await generateImageBuffer(finalPrompt);
+        const imageBuffer = await generateImageBuffer(originalPrompt);
         const filename = await saveImage(imageBuffer);
         const imageUrl = getImageUrl(filename);
 
         await updateGenerationStatus(generationId, {
           status: 'success',
-          finalPrompt,
+          finalPrompt: originalPrompt,
           imageUrl,
           imageFilename: filename,
         });
