@@ -24,6 +24,10 @@ docs/api/
 │  ├── auth.md                       # POST /verify-google endpoint
 │  └── AUTHENTICATION_UPDATE.md      # Why & how we changed OAuth
 │
+├── DESIGNS
+│  ├── designs.md                    # Design listing endpoint
+│  └── DESIGNS_FEATURE.md            # Designs feature rollout notes
+│
 ├── IMAGE GENERATION
 │  ├── generations.md                # Endpoints documentation
 │  ├── images.md                     # Image serving & storage
@@ -65,7 +69,12 @@ docs/api/
 4. **[SESSION_REVIEW_2026_05_18.md](./SESSION_REVIEW_2026_05_18.md)** — Architecture details
 
 ### "I want to know what changed"
-👉 **[SESSION_REVIEW_2026_05_19.md](./SESSION_REVIEW_2026_05_19.md)** (Latest)
+👉 **[DESIGNS_FEATURE.md](./DESIGNS_FEATURE.md)** (Latest)
+- New `Design` collection grouping generations
+- `designId` on every `Generation` (auto-created if absent)
+- `GET /api/designs` endpoint
+
+👉 **[SESSION_REVIEW_2026_05_19.md](./SESSION_REVIEW_2026_05_19.md)**
 - BullMQ worker fix
 - Backend public URL for images
 - Removed prompt enhancement
@@ -263,6 +272,7 @@ docs/api/
 | POST /api/auth/verify-google | auth.md | ✅ |
 | GET /api/auth/me | auth.md | ✅ |
 | POST /api/auth/logout | auth.md | ✅ |
+| GET /api/designs | designs.md | ✅ |
 | POST /api/generations | generations.md | ✅ |
 | GET /api/generations | generations.md | ✅ |
 | GET /api/generations/:id | generations.md | ✅ |

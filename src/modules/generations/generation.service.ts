@@ -1,19 +1,35 @@
 import { GenerationModel } from './generation.model.js';
 import { deleteImage } from './image-storage.service.js';
 import { CreateGenerationRequest, RegenerateRequest } from './generation.types.js';
+import { createDesign, findDesignForUser } from '../designs/index.js';
 
 export async function createGeneration(
   userId: string,
   data: CreateGenerationRequest
 ) {
-  const { prompt, style, aspectRatio } = data;
+  const { prompt, designId, style, aspectRatio } = data;
 
   if (!prompt || prompt.trim().length === 0) {
     throw new Error('Prompt is required');
   }
 
+  let resolvedDesignId: string;
+  if (designId) {
+    const existing = await findDesignForUser(designId, userId);
+    if (existing) {
+      resolvedDesignId = existing._id.toString();
+    } else {
+      const created = await createDesign(userId, prompt);
+      resolvedDesignId = created._id.toString();
+    }
+  } else {
+    const created = await createDesign(userId, prompt);
+    resolvedDesignId = created._id.toString();
+  }
+
   const generation = await GenerationModel.create({
     userId,
+    designId: resolvedDesignId,
     originalPrompt: prompt,
     finalPrompt: prompt,
     status: 'pending',

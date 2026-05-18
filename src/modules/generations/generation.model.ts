@@ -10,6 +10,11 @@ const generationSchema = new Schema<GenerationDocument>(
       required: true,
       index: true,
     },
+    designId: {
+      type: String,
+      required: true,
+      index: true,
+    },
     originalPrompt: {
       type: String,
       required: true,

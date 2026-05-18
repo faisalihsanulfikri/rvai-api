@@ -36,6 +36,7 @@ Content-Type: application/json
 ```json
 {
   "prompt": "Modern minimalist living room with natural light",
+  "designId": "507f1f77bcf86cd799439020",
   "style": "minimalist",
   "aspectRatio": "16:9"
 }
@@ -46,14 +47,20 @@ Content-Type: application/json
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `prompt` | string | ✅ Yes | Design description (non-empty) |
+| `designId` | string | ❌ No | Parent design ID. If omitted, unknown, or not owned by the caller, a new design is created with `firstPrompt = prompt`. |
 | `style` | string | ❌ No | Design style: `minimalist`, `modern`, `industrial`, `japandi` |
 | `aspectRatio` | string | ❌ No | Image ratio: `1:1`, `16:9`, `9:16`, `4:3` |
+
+**Design resolution**:
+- `designId` present and owned by caller → generation is attached to that design.
+- `designId` omitted, empty, or pointing to a missing/foreign design → a new `Design` is created (with `firstPrompt = prompt`), and the new id is used.
 
 **Response** (201 Created):
 ```json
 {
   "id": "507f1f77bcf86cd799439011",
   "userId": "507f1f77bcf86cd799439012",
+  "designId": "507f1f77bcf86cd799439020",
   "originalPrompt": "Modern minimalist living room with natural light",
   "finalPrompt": "Modern minimalist living room with natural light",
   "status": "pending",
@@ -142,6 +149,7 @@ Authorization: Bearer <token>
   {
     "id": "507f1f77bcf86cd799439011",
     "userId": "507f1f77bcf86cd799439012",
+    "designId": "507f1f77bcf86cd799439020",
     "originalPrompt": "Modern living room",
     "finalPrompt": "Modern living room with natural light and contemporary furniture",
     "imageUrl": "http://localhost:3000/api/images/550e8400-e29b-41d4-a716-446655440000.jpg",
@@ -154,6 +162,7 @@ Authorization: Bearer <token>
   {
     "id": "507f1f77bcf86cd799439013",
     "userId": "507f1f77bcf86cd799439012",
+    "designId": "507f1f77bcf86cd799439021",
     "originalPrompt": "Industrial kitchen",
     "finalPrompt": "Industrial kitchen",
     "imageUrl": null,
@@ -177,6 +186,7 @@ Authorization: Bearer <token>
 |-------|------|-------------|
 | `id` | string | Unique generation ID |
 | `userId` | string | Owner user ID |
+| `designId` | string | Parent design ID |
 | `originalPrompt` | string | User's original prompt |
 | `finalPrompt` | string | AI-enhanced prompt |
 | `imageUrl` | string | URL to generated image (null if not ready) |
@@ -233,6 +243,7 @@ Authorization: Bearer <token>
 {
   "id": "507f1f77bcf86cd799439011",
   "userId": "507f1f77bcf86cd799439012",
+  "designId": "507f1f77bcf86cd799439020",
   "originalPrompt": "Modern minimalist living room with natural light",
   "finalPrompt": "Modern minimalist living room with natural light and minimalist furniture aesthetic",
   "imageUrl": "http://localhost:3000/api/images/550e8400-e29b-41d4-a716-446655440000.jpg",
@@ -323,6 +334,7 @@ Content-Type: application/json
 {
   "id": "507f1f77bcf86cd799439011",
   "userId": "507f1f77bcf86cd799439012",
+  "designId": "507f1f77bcf86cd799439020",
   "originalPrompt": "Japandi style bedroom with wood accents",
   "finalPrompt": "Japandi style bedroom with wood accents",
   "status": "pending",
@@ -339,7 +351,7 @@ Content-Type: application/json
 - `500` - Server error
 
 **What Happens**:
-1. Updates original generation with new prompt
+1. Updates original generation with new prompt (keeps the existing `designId`)
 2. Resets status to `pending`
 3. Queues new job
 4. Returns updated generation

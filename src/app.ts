@@ -1,6 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import { authRouter } from './modules/auth/index.js';
+import { designRouter } from './modules/designs/index.js';
 import { generationRouter } from './modules/generations/index.js';
 import { imageRouter } from './modules/images/index.js';
 
@@ -24,6 +25,7 @@ export function createApp() {
 
   // Module routes
   app.use('/api/auth', authRouter);
+  app.use('/api/designs', designRouter);
   app.use('/api/generations', generationRouter);
   app.use('/api/images', imageRouter);
 

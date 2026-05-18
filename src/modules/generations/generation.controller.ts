@@ -15,6 +15,7 @@ export async function create(req: Request, res: Response) {
 
     await queueService.queueGeneration({
       generationId: generation._id.toString(),
+      designId: generation.designId,
       userId,
       originalPrompt: data.prompt,
       style: data.style,
@@ -24,6 +25,7 @@ export async function create(req: Request, res: Response) {
     res.status(201).json({
       id: generation._id,
       userId: generation.userId,
+      designId: generation.designId,
       originalPrompt: generation.originalPrompt,
       finalPrompt: generation.finalPrompt,
       status: generation.status,
@@ -51,6 +53,7 @@ export async function listByUser(req: Request, res: Response) {
       generations.map((g: any) => ({
         id: g._id,
         userId: g.userId,
+        designId: g.designId,
         originalPrompt: g.originalPrompt,
         finalPrompt: g.finalPrompt,
         imageUrl: g.imageUrl,
@@ -82,6 +85,7 @@ export async function getById(req: Request, res: Response) {
     res.json({
       id: generation._id,
       userId: generation.userId,
+      designId: generation.designId,
       originalPrompt: generation.originalPrompt,
       finalPrompt: generation.finalPrompt,
       imageUrl: generation.imageUrl,
@@ -114,6 +118,7 @@ export async function regenerate(req: Request, res: Response) {
 
     await queueService.queueGeneration({
       generationId: generation._id.toString(),
+      designId: generation.designId,
       userId,
       originalPrompt: data.prompt,
       style: data.style,
@@ -123,6 +128,7 @@ export async function regenerate(req: Request, res: Response) {
     res.json({
       id: generation._id,
       userId: generation.userId,
+      designId: generation.designId,
       originalPrompt: generation.originalPrompt,
       finalPrompt: generation.finalPrompt,
       status: generation.status,

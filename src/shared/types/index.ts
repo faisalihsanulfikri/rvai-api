@@ -12,9 +12,18 @@ export interface User {
   updatedAt: Date;
 }
 
+export interface Design {
+  _id?: any;
+  userId: string;
+  firstPrompt: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 export interface Generation {
   _id?: any;
   userId: string;
+  designId: string;
   originalPrompt: string;
   finalPrompt: string;
   imageUrl: string;
@@ -35,6 +44,7 @@ export interface AuthUser {
 
 export interface GenerationJob {
   generationId: string;
+  designId: string;
   userId: string;
   originalPrompt: string;
   style?: DesignStyle;

@@ -78,9 +78,52 @@ When returned in API responses, fields are:
 
 ---
 
+## Design
+
+Represents a logical "design" that groups one or more `Generation` records. A design is created automatically when a generation is started without a valid `designId`.
+
+### Schema
+
+```typescript
+interface Design {
+  id: ObjectId;          // MongoDB unique ID
+  userId: ObjectId;      // Owner's user ID
+  firstPrompt: string;   // The prompt that originally created this design
+  createdAt: Date;
+  updatedAt: Date;
+}
+```
+
+### Database
+
+**Collection**: `designs`
+
+**Indexes**:
+- `userId`
+- `(userId, createdAt)` (compound)
+
+**Sample Document**:
+```json
+{
+  "_id": ObjectId("507f1f77bcf86cd799439020"),
+  "userId": ObjectId("507f1f77bcf86cd799439011"),
+  "firstPrompt": "Modern minimalist living room",
+  "createdAt": ISODate("2026-05-19T10:30:00.000Z"),
+  "updatedAt": ISODate("2026-05-19T10:30:00.000Z")
+}
+```
+
+### Lifecycle
+
+1. **Creation**: First `POST /api/generations` call (no `designId`, or unknown/foreign `designId`) creates a new design with `firstPrompt` set to that prompt.
+2. **Reuse**: Subsequent generations can pass `designId` to attach to the same design.
+3. **Ownership**: Designs are user-scoped — a `designId` that doesn't belong to the caller is treated as missing, and a new design is created instead.
+
+---
+
 ## Generation
 
-Represents a single image generation request and its result.
+Represents a single image generation request and its result. Always belongs to a `Design`.
 
 ### Schema
 
@@ -88,6 +131,7 @@ Represents a single image generation request and its result.
 interface Generation {
   id: ObjectId;                          // MongoDB unique ID
   userId: ObjectId;                      // Owner's user ID
+  designId: ObjectId;                    // Parent design ID
   originalPrompt: string;                // User's original text input
   finalPrompt: string;                   // AI-enhanced prompt
   imageUrl?: string;                     // Public URL to generated image
@@ -107,6 +151,7 @@ interface Generation {
 
 **Indexes**:
 - `userId` (indexed)
+- `designId` (indexed)
 - `status` (indexed)
 - `(userId, createdAt)` (compound, for efficient user queries)
 
@@ -115,6 +160,7 @@ interface Generation {
 {
   "_id": ObjectId("507f1f77bcf86cd799439012"),
   "userId": ObjectId("507f1f77bcf86cd799439011"),
+  "designId": ObjectId("507f1f77bcf86cd799439020"),
   "originalPrompt": "Modern minimalist living room",
   "finalPrompt": "Modern minimalist living room with natural light and contemporary furniture",
   "imageUrl": "http://localhost:3000/api/images/550e8400-e29b-41d4-a716-446655440000.jpg",
@@ -132,6 +178,7 @@ interface Generation {
 {
   "_id": ObjectId("507f1f77bcf86cd799439013"),
   "userId": ObjectId("507f1f77bcf86cd799439011"),
+  "designId": ObjectId("507f1f77bcf86cd799439020"),
   "originalPrompt": "Industrial kitchen with exposed brick",
   "finalPrompt": "Industrial kitchen with exposed brick",
   "status": "processing",
@@ -147,6 +194,7 @@ interface Generation {
 {
   "_id": ObjectId("507f1f77bcf86cd799439014"),
   "userId": ObjectId("507f1f77bcf86cd799439011"),
+  "designId": ObjectId("507f1f77bcf86cd799439020"),
   "originalPrompt": "Invalid prompt",
   "finalPrompt": "Invalid prompt",
   "status": "failed",
@@ -162,6 +210,7 @@ interface Generation {
 |-------|------|----------|-------------|
 | `_id` | ObjectId | ✅ | MongoDB unique ID |
 | `userId` | ObjectId | ✅ | Owner user ID (links to User) |
+| `designId` | ObjectId | ✅ | Parent design ID (links to Design) |
 | `originalPrompt` | string | ✅ | User's input text |
 | `finalPrompt` | string | ✅ | Prompt after AI enhancement |
 | `imageUrl` | string | ❌ | Public URL to image (null until ready) |
@@ -188,6 +237,7 @@ interface Generation {
 {
   "id": "507f1f77bcf86cd799439012",
   "userId": "507f1f77bcf86cd799439011",
+  "designId": "507f1f77bcf86cd799439020",
   "originalPrompt": "Modern minimalist living room",
   "finalPrompt": "Modern minimalist living room with natural light and contemporary furniture",
   "imageUrl": "http://localhost:3000/api/images/550e8400-e29b-41d4-a716-446655440000.jpg",
@@ -291,16 +341,20 @@ type GenerationStatus = 'pending' | 'processing' | 'success' | 'failed';
 ```
 User
   ↓ 1:N
-  Generation (userId references User._id)
+  Design (userId references User._id)
+    ↓ 1:N
+    Generation (designId references Design._id, userId references User._id)
 ```
 
 **Cardinality**:
-- 1 User → many Generations
-- 1 Generation → 1 User
+- 1 User → many Designs
+- 1 Design → many Generations
+- 1 Generation → 1 Design, 1 User
 
 **Referential Integrity**:
-- No automatic cascade on user delete (keeps historical data)
+- No automatic cascade on user/design delete (keeps historical data)
 - Orphaned generations remain accessible to admin
+- A `designId` that does not belong to the caller is treated as missing on `POST /api/generations` (a new design is created)
 
 ---
 
@@ -309,7 +363,7 @@ User
 ### Database
 
 **MongoDB**:
-- Collections: `users`, `generations`
+- Collections: `users`, `designs`, `generations`
 - Connection: `MONGODB_URI` (default: localhost:27017)
 - Database: `roomvision-ai`
 
@@ -347,9 +401,18 @@ export interface User {
   updatedAt: Date;
 }
 
+export interface Design {
+  id: string;
+  userId: string;
+  firstPrompt: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 export interface Generation {
   id: string;
   userId: string;
+  designId: string;
   originalPrompt: string;
   finalPrompt: string;
   imageUrl: string;
@@ -370,6 +433,7 @@ export interface AuthUser {
 
 export interface GenerationJob {
   generationId: string;
+  designId: string;
   userId: string;
   originalPrompt: string;
   style?: DesignStyle;
