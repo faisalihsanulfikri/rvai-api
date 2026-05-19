@@ -1,5 +1,5 @@
 import { GenerationModel } from './generation.model.js';
-import { deleteImage } from './image-storage.service.js';
+import { deleteImage, saveInputImage } from './image-storage.service.js';
 import { CreateGenerationRequest, RegenerateRequest } from './generation.types.js';
 import { createDesign, findDesignForUser } from '../designs/index.js';
 
@@ -7,7 +7,7 @@ export async function createGeneration(
   userId: string,
   data: CreateGenerationRequest
 ) {
-  const { prompt, designId, style, aspectRatio } = data;
+  const { prompt, designId, style, aspectRatio, inputImage } = data;
 
   if (!prompt || prompt.trim().length === 0) {
     throw new Error('Prompt is required');
@@ -27,6 +27,8 @@ export async function createGeneration(
     resolvedDesignId = created._id.toString();
   }
 
+  const inputImageFilename = inputImage ? await saveInputImage(inputImage) : undefined;
+
   const generation = await GenerationModel.create({
     userId,
     designId: resolvedDesignId,
@@ -35,6 +37,7 @@ export async function createGeneration(
     status: 'pending',
     style,
     aspectRatio,
+    inputImageFilename,
   });
 
   return generation;
@@ -71,7 +74,7 @@ export async function regenerateDesign(
   userId: string,
   data: RegenerateRequest
 ) {
-  const { prompt, style, aspectRatio } = data;
+  const { prompt, style, aspectRatio, inputImage } = data;
 
   if (!prompt || prompt.trim().length === 0) {
     throw new Error('Prompt is required');
@@ -81,6 +84,13 @@ export async function regenerateDesign(
 
   if (!generation) {
     throw new Error('Generation not found');
+  }
+
+  if (inputImage) {
+    if (generation.inputImageFilename) {
+      await deleteImage(generation.inputImageFilename);
+    }
+    generation.inputImageFilename = await saveInputImage(inputImage);
   }
 
   generation.originalPrompt = prompt;
@@ -102,6 +112,9 @@ export async function deleteGeneration(id: string, userId: string) {
 
   if (generation.imageFilename) {
     await deleteImage(generation.imageFilename);
+  }
+  if (generation.inputImageFilename) {
+    await deleteImage(generation.inputImageFilename);
   }
 
   await GenerationModel.deleteOne({ _id: id });

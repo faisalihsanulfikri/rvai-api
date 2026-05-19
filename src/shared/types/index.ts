@@ -28,6 +28,7 @@ export interface Generation {
   finalPrompt: string;
   imageUrl: string;
   imageFilename?: string;
+  inputImageFilename?: string;
   status: GenerationStatus;
   errorMessage?: string;
   style?: DesignStyle;
@@ -49,4 +50,5 @@ export interface GenerationJob {
   originalPrompt: string;
   style?: DesignStyle;
   aspectRatio?: AspectRatio;
+  inputImageFilename?: string;
 }

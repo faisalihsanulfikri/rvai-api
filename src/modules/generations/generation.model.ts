@@ -28,6 +28,7 @@ const generationSchema = new Schema<GenerationDocument>(
       default: null,
     },
     imageFilename: String,
+    inputImageFilename: String,
     status: {
       type: String,
       enum: ['pending', 'processing', 'success', 'failed'] as GenerationStatus[],

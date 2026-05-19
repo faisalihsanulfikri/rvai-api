@@ -24,7 +24,8 @@ Content-Type: application/json
 {
   "prompt": "Modern minimalist living room with natural light",
   "style": "minimalist",
-  "aspectRatio": "16:9"
+  "aspectRatio": "16:9",
+  "inputImage": "data:image/jpeg;base64,..."   // optional reference image
 }
 ```
 
@@ -42,27 +43,34 @@ Content-Type: application/json
 ```
 
 **What happened in backend:**
-1. ✓ Created generation record in MongoDB with status: "pending"
-2. ✓ Queued job in Redis
-3. ✓ Returned immediately (non-blocking)
+1. ✓ If `inputImage` was supplied, decoded the data URL and saved it to disk as `inputImageFilename`
+2. ✓ Created generation record in MongoDB with status: "pending" (including `inputImageFilename` if any)
+3. ✓ Queued job in Redis (the job carries the filename, not the base64 — keeps Redis lean)
+4. ✓ Returned immediately (non-blocking)
 
 ### Phase 2: Job Processing (Background)
 
-**Worker picks up the job:**
+**Worker picks up the job (vision-bridge workflow, all free):**
 ```
 Queue Job #1: generation-507f1f77bcf86cd799439011
   ├─ Status → "processing"
-  ├─ Enhance prompt with Gemini API
-  ├─ Generate image with Pollinations.ai
+  ├─ Load inputImage from disk → base64 (if inputImageFilename present)
+  ├─ Gemini Vision (gemini-2.5-flash):  inputImage → text description
+  │   (skipped if no inputImage)
+  ├─ Build finalPrompt:
+  │     "Reference scene: <description>\n\nTransform to: <prompt>\n\nStyle: <style>"
+  ├─ Pollinations:  GET /prompt/<encoded>?width=W&height=H&nologo=true
   ├─ Save image to disk
-  ├─ Update database with imageUrl
+  ├─ Update database with imageUrl + finalPrompt
   └─ Status → "success"
 ```
 
-**Time taken:** 10-30 seconds depending on:
-- Gemini API response time
-- Pollinations.ai image generation
+**Time taken:** 6-20 seconds depending on:
+- Gemini Vision latency (~1-3s, only when inputImage present)
+- Pollinations image generation (~5-15s)
 - Network conditions
+
+**Quality note:** Pollinations is text-to-image only. The reference image is bridged via a text description, so high-level structure (layout, palette, materials) transfers but fine details (exact textures, specific furniture placement) won't.
 
 ### Phase 3: Frontend Polls for Status
 
@@ -220,8 +228,10 @@ const checkStatus = async () => {
 **Possible causes:**
 1. **Worker not running** → Check backend logs for "✓ Generation worker started"
 2. **Job failed silently** → Check backend error logs
-3. **Gemini API key invalid** → Check GEMINI_API_KEY in .env
-4. **Pollinations.ai unreachable** → Check internet connection
+3. **Gemini API key invalid** → Check GEMINI_API_KEY in .env (vision input on `gemini-2.5-flash` is free tier)
+4. **Gemini Vision quota exceeded** → Free tier has per-minute limits; wait and retry
+5. **Pollinations unreachable** → Check internet / Pollinations status
+6. **inputImage payload too large** → Default body limit is 15 MB; reduce image size client-side
 
 **Solution:**
 ```bash
@@ -269,11 +279,12 @@ fetch('http://localhost:3001/api/generations', {
 | Phase | Time | Notes |
 |-------|------|-------|
 | POST → Get ID | < 100ms | Immediate |
+| Save inputImage (if any) | < 200ms | Disk write |
 | Queue job | < 100ms | Immediate |
-| Enhance prompt | 2-5s | Gemini API call |
-| Generate image | 5-20s | Pollinations.ai |
+| Describe inputImage (Gemini Vision) | 1-3s | only when inputImage present |
+| Generate image (Pollinations) | 5-15s | `width`/`height` from aspectRatio |
 | Save image | < 1s | Disk write |
-| **Total** | **10-30s** | Depends on APIs |
+| **Total** | **6-19s** | with inputImage; 5-15s without |
 
 ## Architecture Diagram
 
@@ -291,8 +302,10 @@ Frontend                Backend              Redis               Storage
   │                       │   status:         │                   │
   │  {status:processing}  │   processing      │                   │
   │  <────────────────────┤                    │                   │
-  │                       │   Enhance prompt (Gemini)             │
-  │                       │   Generate image (Pollinations.ai)    │
+  │                       │   Load inputImage from disk (if any)  │
+  │                       │   Gemini Vision: describe image       │
+  │                       │   Build finalPrompt                   │
+  │                       │   Pollinations: generate image        │
   │                       │   Save image ─────────────────────>   │
   │ (Poll GET again)      │   Update DB                           │
   │  ────────────────>    │   status:success                      │

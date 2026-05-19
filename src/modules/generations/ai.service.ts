@@ -1,43 +1,111 @@
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import { GoogleGenAI } from '@google/genai';
+import { AspectRatio, DesignStyle } from '../../shared/types/index.js';
 
-let geminiClient: GoogleGenerativeAI | null = null;
+const VISION_MODEL = process.env.GEMINI_VISION_MODEL || 'gemini-2.5-flash';
+const POLLINATIONS_BASE = 'https://image.pollinations.ai/prompt';
 
-function getGeminiClient() {
-  if (!geminiClient) {
+const ASPECT_RATIO_DIMENSIONS: Record<AspectRatio, { width: number; height: number }> = {
+  '1:1': { width: 1024, height: 1024 },
+  '16:9': { width: 1280, height: 720 },
+  '9:16': { width: 720, height: 1280 },
+  '4:3': { width: 1024, height: 768 },
+};
+
+let client: GoogleGenAI | null = null;
+
+function getClient(): GoogleGenAI {
+  if (!client) {
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
       throw new Error('GEMINI_API_KEY environment variable is not set');
     }
-    geminiClient = new GoogleGenerativeAI(apiKey);
+    client = new GoogleGenAI({ apiKey });
   }
-  return geminiClient;
+  return client;
 }
 
-export async function enhancePrompt(prompt: string): Promise<string> {
-  try {
-    const client = getGeminiClient();
-    const model = client.getGenerativeModel({ model: 'gemini-2.5-flash' });
-
-    const response = await model.generateContent(
-      `You are an expert interior design AI assistant. Enhance this prompt for maximum visual clarity:\n"${prompt}"\n\nRespond with ONLY the enhanced prompt.`
-    );
-
-    return response.response.text().trim() || prompt;
-  } catch (error) {
-    console.warn('Failed to enhance prompt:', error);
-    return prompt;
-  }
+export interface InputImage {
+  mimeType: string;
+  data: string;
 }
 
-export async function generateImageBuffer(prompt: string): Promise<Buffer> {
-  const encodedPrompt = encodeURIComponent(prompt);
-  const imageUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}`;
+export interface GenerateImageOptions {
+  prompt: string;
+  aspectRatio?: AspectRatio;
+  style?: DesignStyle;
+  inputImage?: InputImage;
+}
 
-  const response = await fetch(imageUrl);
+export interface GenerateImageResult {
+  buffer: Buffer;
+  finalPrompt: string;
+}
+
+async function describeInputImage(image: InputImage): Promise<string> {
+  const ai = getClient();
+  const response = await ai.models.generateContent({
+    model: VISION_MODEL,
+    contents: [
+      {
+        role: 'user',
+        parts: [
+          { inlineData: { mimeType: image.mimeType, data: image.data } },
+          {
+            text:
+              'Describe this interior space concisely (max 120 words) for an image generator. ' +
+              'Cover: room type, layout, materials, lighting, furniture, color palette, and mood. ' +
+              'Output only the description — no preamble.',
+          },
+        ],
+      },
+    ],
+  });
+
+  const text =
+    response.text ??
+    response.candidates?.[0]?.content?.parts?.find((p: any) => typeof p?.text === 'string')?.text;
+
+  if (!text || !text.trim()) {
+    throw new Error('Gemini vision returned no description');
+  }
+  return text.trim();
+}
+
+function buildFinalPrompt(opts: {
+  prompt: string;
+  style?: DesignStyle;
+  description?: string;
+}): string {
+  const parts: string[] = [];
+  if (opts.description) {
+    parts.push(`Reference scene: ${opts.description}`);
+    parts.push(`Transform to: ${opts.prompt}`);
+  } else {
+    parts.push(opts.prompt);
+  }
+  if (opts.style) {
+    parts.push(`Style: ${opts.style}`);
+  }
+  return parts.join('\n\n');
+}
+
+export async function generateImageBuffer(options: GenerateImageOptions): Promise<GenerateImageResult> {
+  const { prompt, style, inputImage, aspectRatio } = options;
+
+  const description = inputImage ? await describeInputImage(inputImage) : undefined;
+  const finalPrompt = buildFinalPrompt({ prompt, style, description });
+
+  console.log('finalPrompt = ', finalPrompt);
+  
+
+  const dims = ASPECT_RATIO_DIMENSIONS[aspectRatio ?? '1:1'];
+  const url = `${POLLINATIONS_BASE}/${encodeURIComponent(finalPrompt)}?width=${dims.width}&height=${dims.height}&nologo=true`;
+
+  const response = await fetch(url);
   if (!response.ok) {
-    throw new Error(`Failed to generate image: ${response.statusText}`);
+    throw new Error(`Pollinations failed: ${response.status} ${response.statusText}`);
   }
 
-  const buffer = await response.arrayBuffer();
-  return Buffer.from(buffer);
+  const arrayBuffer = await response.arrayBuffer();
+  return { buffer: Buffer.from(arrayBuffer), finalPrompt };
 }

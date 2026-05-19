@@ -39,3 +39,41 @@ export async function getImageBuffer(filename: string): Promise<Buffer> {
   const filepath = path.join(IMAGE_STORAGE_PATH, filename);
   return fs.readFile(filepath);
 }
+
+const MIME_EXTENSIONS: Record<string, string> = {
+  'image/jpeg': 'jpg',
+  'image/jpg': 'jpg',
+  'image/png': 'png',
+  'image/webp': 'webp',
+};
+
+export interface DecodedDataUrl {
+  mimeType: string;
+  data: string;
+  buffer: Buffer;
+}
+
+export function decodeImageDataUrl(dataUrl: string): DecodedDataUrl {
+  const match = dataUrl.match(/^data:(image\/(?:jpeg|jpg|png|webp));base64,(.+)$/);
+  if (!match) {
+    throw new Error('inputImage must be a base64 data URL (image/jpeg, image/png, or image/webp)');
+  }
+  const [, mimeType, data] = match;
+  return { mimeType, data, buffer: Buffer.from(data, 'base64') };
+}
+
+export async function saveInputImage(dataUrl: string): Promise<string> {
+  const decoded = decodeImageDataUrl(dataUrl);
+  const ext = MIME_EXTENSIONS[decoded.mimeType] ?? 'jpg';
+  const filename = `${uuidv4()}.${ext}`;
+  const filepath = path.join(IMAGE_STORAGE_PATH, filename);
+  await fs.writeFile(filepath, decoded.buffer);
+  return filename;
+}
+
+export function getMimeTypeForFilename(filename: string): string {
+  const ext = path.extname(filename).slice(1).toLowerCase();
+  if (ext === 'png') return 'image/png';
+  if (ext === 'webp') return 'image/webp';
+  return 'image/jpeg';
+}

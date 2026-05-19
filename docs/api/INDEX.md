@@ -31,7 +31,8 @@ docs/api/
 ├── IMAGE GENERATION
 │  ├── generations.md                # Endpoints documentation
 │  ├── images.md                     # Image serving & storage
-│  └── GENERATION_FLOW.md            # Complete async flow guide
+│  ├── GENERATION_FLOW.md            # Complete async flow guide
+│  └── VISION_BRIDGE_FEATURE.md      # inputImage + aspect ratio (vision-bridge)
 │
 └── SESSION & REVIEWS
    ├── SESSION_REVIEW_2026_05_18.md  # Auth refactor session
@@ -69,7 +70,13 @@ docs/api/
 4. **[SESSION_REVIEW_2026_05_18.md](./SESSION_REVIEW_2026_05_18.md)** — Architecture details
 
 ### "I want to know what changed"
-👉 **[DESIGNS_FEATURE.md](./DESIGNS_FEATURE.md)** (Latest)
+👉 **[VISION_BRIDGE_FEATURE.md](./VISION_BRIDGE_FEATURE.md)** (Latest)
+- `inputImage` payload (base64 data URL) on POST/regenerate
+- Aspect ratio mapped to Pollinations `width`/`height`
+- Gemini Vision (free tier) describes the reference image; Pollinations generates from the merged text
+- `inputImageFilename` persisted on `Generation`; `finalPrompt` now reflects what was actually sent
+
+👉 **[DESIGNS_FEATURE.md](./DESIGNS_FEATURE.md)**
 - New `Design` collection grouping generations
 - `designId` on every `Generation` (auto-created if absent)
 - `GET /api/designs` endpoint

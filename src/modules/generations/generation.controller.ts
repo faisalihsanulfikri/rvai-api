@@ -20,6 +20,7 @@ export async function create(req: Request, res: Response) {
       originalPrompt: data.prompt,
       style: data.style,
       aspectRatio: data.aspectRatio,
+      inputImageFilename: generation.inputImageFilename,
     });
 
     res.status(201).json({
@@ -123,6 +124,7 @@ export async function regenerate(req: Request, res: Response) {
       originalPrompt: data.prompt,
       style: data.style,
       aspectRatio: data.aspectRatio,
+      inputImageFilename: generation.inputImageFilename,
     });
 
     res.json({

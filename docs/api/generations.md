@@ -38,7 +38,8 @@ Content-Type: application/json
   "prompt": "Modern minimalist living room with natural light",
   "designId": "507f1f77bcf86cd799439020",
   "style": "minimalist",
-  "aspectRatio": "16:9"
+  "aspectRatio": "16:9",
+  "inputImage": "data:image/jpeg;base64,/9j/4AAQSkZJRg..."
 }
 ```
 
@@ -49,7 +50,8 @@ Content-Type: application/json
 | `prompt` | string | ✅ Yes | Design description (non-empty) |
 | `designId` | string | ❌ No | Parent design ID. If omitted, unknown, or not owned by the caller, a new design is created with `firstPrompt = prompt`. |
 | `style` | string | ❌ No | Design style: `minimalist`, `modern`, `industrial`, `japandi` |
-| `aspectRatio` | string | ❌ No | Image ratio: `1:1`, `16:9`, `9:16`, `4:3` |
+| `aspectRatio` | string | ❌ No | Image ratio: `1:1` (1024×1024), `16:9` (1280×720), `9:16` (720×1280), `4:3` (1024×768). Mapped to Pollinations `width`/`height`. Defaults to `1:1`. |
+| `inputImage` | string | ❌ No | Base64 data URL (`data:image/jpeg;base64,...`, also `image/png` / `image/webp`) of a reference image. Backend describes it with Gemini Vision (free) and feeds the description into Pollinations. Max payload size: 15 MB. |
 
 **Design resolution**:
 - `designId` present and owned by caller → generation is attached to that design.
@@ -80,12 +82,15 @@ Content-Type: application/json
 2. Creates Generation record with status: `pending`
 3. Queues job in BullMQ
 4. Returns immediately with generation ID
-5. Job processor runs asynchronously:
-   - Enhances prompt with Gemini
-   - Generates image with Pollinations.ai
+5. Job processor runs asynchronously (vision-bridge workflow):
+   - If `inputImage` was supplied, calls Gemini (`gemini-2.5-flash`, free tier — vision input) to describe the reference image as text
+   - Composes a final prompt: `Reference scene: <description>\n\nTransform to: <prompt>\n\nStyle: <style>`
+   - Generates the image with Pollinations.ai (free) using `width`/`height` derived from `aspectRatio`
    - Saves image to filesystem
-   - Updates database with result
+   - Persists the composed `finalPrompt` on the generation record
 6. Frontend polls to check status
+
+> Note: Pollinations is text-to-image only — it never sees the actual reference image. High-level structure (layout, palette, materials) transfers via the text description; fine details will not.
 
 **Example**:
 ```bash
@@ -325,9 +330,12 @@ Content-Type: application/json
 {
   "prompt": "Japandi style bedroom with wood accents",
   "style": "japandi",
-  "aspectRatio": "1:1"
+  "aspectRatio": "1:1",
+  "inputImage": "data:image/jpeg;base64,/9j/4AAQSkZJRg..."
 }
 ```
+
+**Request Fields**: same as create. `inputImage` is optional — supply it to condition the regenerated image on a reference (e.g. the previous output the user just saw). When supplied, the previously stored input image (if any) is replaced.
 
 **Response** (200 OK):
 ```json
