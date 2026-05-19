@@ -33,7 +33,8 @@ docs/api/
 │  ├── images.md                     # Image serving & storage
 │  ├── GENERATION_FLOW.md            # Complete async flow guide
 │  ├── VISION_BRIDGE_FEATURE.md      # inputImage + aspect ratio (vision-bridge)
-│  └── MULTIPART_UPLOAD_SUPPORT.md   # multipart/form-data on POST + regenerate
+│  ├── MULTIPART_UPLOAD_SUPPORT.md   # multipart/form-data on POST + regenerate
+│  └── HUGGINGFACE_PROVIDER.md       # HuggingFace as alternative provider (img2img)
 │
 └── SESSION & REVIEWS
    ├── SESSION_REVIEW_2026_05_18.md  # Auth refactor session
