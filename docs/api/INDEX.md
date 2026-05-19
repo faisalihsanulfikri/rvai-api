@@ -32,7 +32,8 @@ docs/api/
 │  ├── generations.md                # Endpoints documentation
 │  ├── images.md                     # Image serving & storage
 │  ├── GENERATION_FLOW.md            # Complete async flow guide
-│  └── VISION_BRIDGE_FEATURE.md      # inputImage + aspect ratio (vision-bridge)
+│  ├── VISION_BRIDGE_FEATURE.md      # inputImage + aspect ratio (vision-bridge)
+│  └── MULTIPART_UPLOAD_SUPPORT.md   # multipart/form-data on POST + regenerate
 │
 └── SESSION & REVIEWS
    ├── SESSION_REVIEW_2026_05_18.md  # Auth refactor session
@@ -70,7 +71,12 @@ docs/api/
 4. **[SESSION_REVIEW_2026_05_18.md](./SESSION_REVIEW_2026_05_18.md)** — Architecture details
 
 ### "I want to know what changed"
-👉 **[VISION_BRIDGE_FEATURE.md](./VISION_BRIDGE_FEATURE.md)** (Latest)
+👉 **[MULTIPART_UPLOAD_SUPPORT.md](./MULTIPART_UPLOAD_SUPPORT.md)** (Latest)
+- `POST /api/generations` and `/:id/regenerate` now accept `multipart/form-data`
+- File field `referenceImage` (image/jpeg|png|webp, max 15 MB) replaces having to base64-encode on the client
+- JSON path with `inputImage` data URL remains fully backward compatible
+
+👉 **[VISION_BRIDGE_FEATURE.md](./VISION_BRIDGE_FEATURE.md)**
 - `inputImage` payload (base64 data URL) on POST/regenerate
 - Aspect ratio mapped to Pollinations `width`/`height`
 - Gemini Vision (free tier) describes the reference image; Pollinations generates from the merged text

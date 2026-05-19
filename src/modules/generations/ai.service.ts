@@ -94,8 +94,6 @@ export async function generateImageBuffer(options: GenerateImageOptions): Promis
 
   const description = inputImage ? await describeInputImage(inputImage) : undefined;
   const finalPrompt = buildFinalPrompt({ prompt, style, description });
-
-  console.log('finalPrompt = ', finalPrompt);
   
 
   const dims = ASPECT_RATIO_DIMENSIONS[aspectRatio ?? '1:1'];

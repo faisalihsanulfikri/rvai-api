@@ -35,6 +35,8 @@ Complete REST API documentation for RoomVision AI backend.
 - **[generations.md](./generations.md)** — POST/GET /generations, async flow
 - **[images.md](./images.md)** — Serving generated images, storage details
 - **[GENERATION_FLOW.md](./GENERATION_FLOW.md)** — Complete async flow, polling strategy, React example
+- **[VISION_BRIDGE_FEATURE.md](./VISION_BRIDGE_FEATURE.md)** — `inputImage` + aspect-ratio vision-bridge flow
+- **[MULTIPART_UPLOAD_SUPPORT.md](./MULTIPART_UPLOAD_SUPPORT.md)** — multipart/form-data on create + regenerate
 
 ### 📋 Development & Review
 - **[SESSION_REVIEW_2026_05_18.md](./SESSION_REVIEW_2026_05_18.md)** — Complete session: changes, validation, architecture review

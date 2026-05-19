@@ -3,6 +3,10 @@ import * as generationService from './generation.service.js';
 import * as queueService from './generation.queue.js';
 import { CreateGenerationRequest, RegenerateRequest } from './generation.types.js';
 
+function fileToDataUrl(file: Express.Multer.File): string {
+  return `data:${file.mimetype};base64,${file.buffer.toString('base64')}`;
+}
+
 export async function create(req: Request, res: Response) {
   try {
     const userId = req.userId;
@@ -10,7 +14,10 @@ export async function create(req: Request, res: Response) {
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
-    const data: CreateGenerationRequest = req.body;
+    const data: CreateGenerationRequest = { ...req.body };
+    if (req.file) {
+      data.inputImage = fileToDataUrl(req.file);
+    }
     const generation = await generationService.createGeneration(userId, data);
 
     await queueService.queueGeneration({
@@ -114,7 +121,10 @@ export async function regenerate(req: Request, res: Response) {
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
-    const data: RegenerateRequest = req.body;
+    const data: RegenerateRequest = { ...req.body };
+    if (req.file) {
+      data.inputImage = fileToDataUrl(req.file);
+    }
     const generation = await generationService.regenerateDesign(id, userId, data);
 
     await queueService.queueGeneration({
