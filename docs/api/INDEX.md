@@ -33,6 +33,7 @@ docs/api/
 │  ├── images.md                     # Image serving & storage
 │  ├── GENERATION_FLOW.md            # Complete async flow guide
 │  ├── VISION_BRIDGE_FEATURE.md      # inputImage + aspect ratio (vision-bridge)
+│  ├── DETERMINISTIC_GENERATION.md   # Same inputs → same image (temp 0 + seeded Pollinations)
 │  ├── MULTIPART_UPLOAD_SUPPORT.md   # multipart/form-data on POST + regenerate
 │  └── HUGGINGFACE_PROVIDER.md       # HuggingFace as alternative provider (img2img)
 │
@@ -72,7 +73,12 @@ docs/api/
 4. **[SESSION_REVIEW_2026_05_18.md](./SESSION_REVIEW_2026_05_18.md)** — Architecture details
 
 ### "I want to know what changed"
-👉 **[MULTIPART_UPLOAD_SUPPORT.md](./MULTIPART_UPLOAD_SUPPORT.md)** (Latest)
+👉 **[DETERMINISTIC_GENERATION.md](./DETERMINISTIC_GENERATION.md)** (Latest)
+- Same image + same prompt + same style + same aspect ratio now produces an identical image
+- Gemini Vision pinned to `temperature: 0`, `topP: 0`, with a role-anchored / anti-hallucination / structured-output prompt
+- Pollinations seeded with `sha256(aspectRatio + finalPrompt)` → uint32
+
+👉 **[MULTIPART_UPLOAD_SUPPORT.md](./MULTIPART_UPLOAD_SUPPORT.md)**
 - `POST /api/generations` and `/:id/regenerate` now accept `multipart/form-data`
 - File field `referenceImage` (image/jpeg|png|webp, max 15 MB) replaces having to base64-encode on the client
 - JSON path with `inputImage` data URL remains fully backward compatible

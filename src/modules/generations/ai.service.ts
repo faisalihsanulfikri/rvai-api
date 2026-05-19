@@ -1,4 +1,5 @@
 import { GoogleGenAI } from '@google/genai';
+import { createHash } from 'crypto';
 import { AspectRatio, DesignStyle } from '../../shared/types/index.js';
 
 const VISION_MODEL = process.env.GEMINI_VISION_MODEL || 'gemini-2.5-flash';
@@ -45,6 +46,10 @@ async function describeInputImage(image: InputImage): Promise<string> {
   const ai = getClient();
   const response = await ai.models.generateContent({
     model: VISION_MODEL,
+    config: {
+      temperature: 0,
+      topP: 0,
+    },
     contents: [
       {
         role: 'user',
@@ -52,9 +57,17 @@ async function describeInputImage(image: InputImage): Promise<string> {
           { inlineData: { mimeType: image.mimeType, data: image.data } },
           {
             text:
-              'Describe this interior space concisely (max 120 words) for an image generator. ' +
-              'Cover: room type, layout, materials, lighting, furniture, color palette, and mood. ' +
-              'Output only the description — no preamble.',
+              'You are an expert interior-design analyst. Describe only what is clearly visible in the image. ' +
+              'If a field is not clearly visible, write "unknown" for that field. Do not invent or assume details that are not present.\n\n' +
+              'Output exactly this format. One line per field, no extra text, no preamble, no commentary:\n' +
+              'Room: <type>\n' +
+              'Layout: <short phrase>\n' +
+              'Walls: <color and material>\n' +
+              'Floor: <material and color>\n' +
+              'Lighting: <natural/artificial, warm/cool>\n' +
+              'Furniture: <3-5 key pieces>\n' +
+              'Palette: <3-4 dominant colors>\n' +
+              'Mood: <one adjective phrase>',
           },
         ],
       },
@@ -89,15 +102,21 @@ function buildFinalPrompt(opts: {
   return parts.join('\n\n');
 }
 
+function computeSeed(finalPrompt: string, aspectRatio: AspectRatio): number {
+  const hash = createHash('sha256').update(`${aspectRatio}|${finalPrompt}`).digest();
+  return hash.readUInt32BE(0);
+}
+
 export async function generateImageBuffer(options: GenerateImageOptions): Promise<GenerateImageResult> {
   const { prompt, style, inputImage, aspectRatio } = options;
 
   const description = inputImage ? await describeInputImage(inputImage) : undefined;
   const finalPrompt = buildFinalPrompt({ prompt, style, description });
-  
 
-  const dims = ASPECT_RATIO_DIMENSIONS[aspectRatio ?? '1:1'];
-  const url = `${POLLINATIONS_BASE}/${encodeURIComponent(finalPrompt)}?width=${dims.width}&height=${dims.height}&nologo=true`;
+  const ratio = aspectRatio ?? '1:1';
+  const dims = ASPECT_RATIO_DIMENSIONS[ratio];
+  const seed = computeSeed(finalPrompt, ratio);
+  const url = `${POLLINATIONS_BASE}/${encodeURIComponent(finalPrompt)}?width=${dims.width}&height=${dims.height}&seed=${seed}&nologo=true`;
 
   const response = await fetch(url);
   if (!response.ok) {
