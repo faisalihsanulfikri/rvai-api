@@ -3,8 +3,24 @@ import { createHash } from 'crypto';
 import { AspectRatio, DesignStyle, Room } from '../../shared/types/index.js';
 
 const IMAGE_MODEL = process.env.GEMINI_IMAGE_MODEL || 'gemini-2.5-flash-image';
+const GEMINI_TIMEOUT_MS = Number(process.env.GEMINI_TIMEOUT_MS) || 60_000;
 
 let client: GoogleGenAI | null = null;
+
+async function withTimeout<T>(p: Promise<T>, ms: number, label: string): Promise<T> {
+  let timer: NodeJS.Timeout | undefined;
+  const timeout = new Promise<never>((_, reject) => {
+    timer = setTimeout(
+      () => reject(new Error(`${label} timed out after ${ms}ms`)),
+      ms
+    );
+  });
+  try {
+    return await Promise.race([p, timeout]);
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+}
 
 function getClient(): GoogleGenAI {
   if (!client) {
@@ -107,11 +123,15 @@ export async function generateImageBuffer(options: GenerateImageOptions): Promis
   const ai = getClient();
   let response;
   try {
-    response = await ai.models.generateContent({
-      model: IMAGE_MODEL,
-      contents: [{ role: 'user', parts }],
-      config,
-    });
+    response = await withTimeout(
+      ai.models.generateContent({
+        model: IMAGE_MODEL,
+        contents: [{ role: 'user', parts }],
+        config,
+      }),
+      GEMINI_TIMEOUT_MS,
+      'Gemini generateContent'
+    );
   } catch (err) {
     const detail = (err as any)?.response?.data ?? (err as any)?.cause ?? (err as any)?.message;
     console.error('Gemini generateContent failed:', JSON.stringify(detail, null, 2));
