@@ -96,10 +96,9 @@ Server will start on `http://localhost:3001`
 - `POST /api/auth/logout` - Logout
 
 ### Generations
-- `POST /api/generations` - Create new generation
+- `POST /api/generations` - Create new generation (also handles the "Regenerate" UX by re-submitting with prefilled fields)
 - `GET /api/generations` - List user's generations
 - `GET /api/generations/:id` - Get specific generation
-- `POST /api/generations/:id/regenerate` - Regenerate with new prompt
 - `DELETE /api/generations/:id` - Delete generation
 
 ### Images

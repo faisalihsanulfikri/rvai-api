@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import * as generationService from './generation.service.js';
 import * as queueService from './generation.queue.js';
-import { CreateGenerationRequest, RegenerateRequest } from './generation.types.js';
+import { CreateGenerationRequest } from './generation.types.js';
 
 function fileToDataUrl(file: Express.Multer.File): string {
   return `data:${file.mimetype};base64,${file.buffer.toString('base64')}`;
@@ -111,50 +111,6 @@ export async function getById(req: Request, res: Response) {
     console.error('Error fetching generation:', error);
     res.status(error instanceof Error && error.message === 'Generation not found' ? 404 : 500).json({
       error: error instanceof Error ? error.message : 'Failed to fetch generation',
-    });
-  }
-}
-
-export async function regenerate(req: Request, res: Response) {
-  try {
-    const { id } = req.params;
-    const userId = req.userId;
-
-    if (!userId) {
-      return res.status(401).json({ error: 'Unauthorized' });
-    }
-
-    const data: RegenerateRequest = { ...req.body };
-    if (req.file) {
-      data.inputImage = fileToDataUrl(req.file);
-    }
-    const generation = await generationService.regenerateDesign(id, userId, data);
-
-    await queueService.queueGeneration({
-      generationId: generation._id.toString(),
-      designId: generation.designId,
-      userId,
-      originalPrompt: data.prompt,
-      style: data.style,
-      room: data.room,
-      aspectRatio: data.aspectRatio,
-      inputImageFilename: generation.inputImageFilename,
-    });
-
-    res.json({
-      id: generation._id,
-      userId: generation.userId,
-      designId: generation.designId,
-      originalPrompt: generation.originalPrompt,
-      finalPrompt: generation.finalPrompt,
-      status: generation.status,
-      createdAt: generation.createdAt,
-      updatedAt: generation.updatedAt,
-    });
-  } catch (error) {
-    console.error('Error regenerating design:', error);
-    res.status(error instanceof Error && error.message === 'Generation not found' ? 404 : 400).json({
-      error: error instanceof Error ? error.message : 'Failed to regenerate design',
     });
   }
 }

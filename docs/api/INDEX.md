@@ -88,9 +88,10 @@ docs/api/
 - Pollinations seeded with `sha256(aspectRatio + finalPrompt)` → uint32
 
 👉 **[MULTIPART_UPLOAD_SUPPORT.md](./MULTIPART_UPLOAD_SUPPORT.md)**
-- `POST /api/generations` and `/:id/regenerate` now accept `multipart/form-data`
+- `POST /api/generations` accepts `multipart/form-data`
 - File field `referenceImage` (image/jpeg|png|webp, max 15 MB) replaces having to base64-encode on the client
 - JSON path with `inputImage` data URL remains fully backward compatible
+- Note: this doc historically also covered `/:id/regenerate`; that endpoint was removed on 2026-05-20
 
 👉 **[VISION_BRIDGE_FEATURE.md](./VISION_BRIDGE_FEATURE.md)**
 - `inputImage` payload (base64 data URL) on POST/regenerate
@@ -305,7 +306,6 @@ docs/api/
 | POST /api/generations | generations.md | ✅ |
 | GET /api/generations | generations.md | ✅ |
 | GET /api/generations/:id | generations.md | ✅ |
-| POST /api/generations/:id/regenerate | generations.md | ✅ |
 | DELETE /api/generations/:id | generations.md | ✅ |
 | GET /api/images/:filename | images.md | ✅ |
 

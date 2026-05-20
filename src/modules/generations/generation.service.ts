@@ -1,6 +1,6 @@
 import { GenerationModel } from './generation.model.js';
 import { deleteImage, saveInputImage } from './image-storage.service.js';
-import { CreateGenerationRequest, RegenerateRequest } from './generation.types.js';
+import { CreateGenerationRequest } from './generation.types.js';
 import { createDesign, findDesignForUser } from '../designs/index.js';
 
 export async function createGeneration(
@@ -68,41 +68,6 @@ export async function updateGenerationStatus(
   updates: Partial<any>
 ) {
   return GenerationModel.findByIdAndUpdate(id, updates, { new: true });
-}
-
-export async function regenerateDesign(
-  id: string,
-  userId: string,
-  data: RegenerateRequest
-) {
-  const { prompt, style, room, aspectRatio, inputImage } = data;
-
-  if (!prompt || prompt.trim().length === 0) {
-    throw new Error('Prompt is required');
-  }
-
-  const generation = await GenerationModel.findOne({ _id: id, userId });
-
-  if (!generation) {
-    throw new Error('Generation not found');
-  }
-
-  if (inputImage) {
-    if (generation.inputImageFilename) {
-      await deleteImage(generation.inputImageFilename);
-    }
-    generation.inputImageFilename = await saveInputImage(inputImage);
-  }
-
-  generation.originalPrompt = prompt;
-  generation.finalPrompt = prompt;
-  generation.status = 'pending';
-  if (style) generation.style = style;
-  if (room) generation.room = room;
-  if (aspectRatio) generation.aspectRatio = aspectRatio;
-
-  await generation.save();
-  return generation;
 }
 
 export async function deleteGeneration(id: string, userId: string) {

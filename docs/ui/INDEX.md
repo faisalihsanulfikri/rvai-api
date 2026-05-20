@@ -8,7 +8,16 @@ Welcome to the RoomVision AI documentation! Start here to find the right guide f
 
 **Just updated!** Check out the recent improvements:
 
-0. **[LANDING_PAGE.md](./LANDING_PAGE.md)** - LATEST (v0.7.0) 🏡
+0. **[REGENERATE_API_CLEANUP.md](./REGENERATE_API_CLEANUP.md)** - LATEST (2026-05-20) 🧹
+   - Removed unused `generations.regenerate()` wrapper from `lib/api.ts` (frontend only)
+   - Regenerate UI is a pure navigation flow → `/generate` prefills form → `generations.create()` — the dedicated API call was bypassed
+   - Backend `POST /api/generations/:id/regenerate` left untouched (separate decision)
+
+0. **[REGENERATE_ROUTE_FIX.md](./REGENERATE_ROUTE_FIX.md)** - (2026-05-20) 🔁
+   - Regenerate links in `app/gallery/[id]/page.tsx` and `components/image-card.tsx` now point to `/generate` instead of `/`
+   - Fixes follow-up to the v0.7.0 route move: prompt/image/style/room query params now actually reach the generation form
+
+0. **[LANDING_PAGE.md](./LANDING_PAGE.md)** - (v0.7.0) 🏡
    - New public landing page at `/` (hero, "Our Work Procedure", "Who We Are", showcase, final CTA, footer) — warm beige palette inspired by the reference mockup
    - Generate app moved from `/` → `/generate`; middleware now allows `/` without auth
    - Header gained a "Home" link; "Sign in" button now routes to `/login` instead of jumping straight into OAuth

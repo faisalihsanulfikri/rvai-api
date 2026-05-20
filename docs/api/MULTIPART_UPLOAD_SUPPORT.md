@@ -2,7 +2,9 @@
 
 **Date**: 2026-05-19 (session 3)
 **Status**: ✅ Implemented
-**Scope**: `POST /api/generations` and `POST /api/generations/:id/regenerate` now accept `multipart/form-data` in addition to JSON
+**Scope**: `POST /api/generations` now accepts `multipart/form-data` in addition to JSON
+
+> **2026-05-20 update:** this doc originally also covered `POST /api/generations/:id/regenerate`, which received the same multipart treatment. That endpoint has since been removed (the frontend "Regenerate" flow is now a pure prefill → `POST /api/generations` path). References to `/:id/regenerate` below are kept for historical accuracy but no longer reflect the live surface.
 
 ---
 

@@ -15,7 +15,6 @@ router.use(authMiddleware);
 router.post('/', upload.single('referenceImage'), controller.create);
 router.get('/', controller.listByUser);
 router.get('/:id', controller.getById);
-router.post('/:id/regenerate', upload.single('referenceImage'), controller.regenerate);
 router.delete('/:id', controller.deleteGeneration);
 
 export default router;

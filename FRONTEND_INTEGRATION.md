@@ -112,11 +112,6 @@ export const api = {
       }),
     list: () => apiCall('/api/generations'),
     get: (id: string) => apiCall(`/api/generations/${id}`),
-    regenerate: (id: string, data: any) =>
-      apiCall(`/api/generations/${id}/regenerate`, {
-        method: 'POST',
-        body: JSON.stringify(data),
-      }),
     delete: (id: string) =>
       apiCall(`/api/generations/${id}`, { method: 'DELETE' }),
   },

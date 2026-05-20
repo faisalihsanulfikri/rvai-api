@@ -16,7 +16,6 @@
 │ │  • POST   /api/generations         → Create generation  │
 │ │  • GET    /api/generations         → List user's        │
 │ │  • GET    /api/generations/:id     → Get detail        │
-│ │  • POST   /api/generations/:id/regenerate → New ver    │
 │ │  • DELETE /api/generations/:id     → Delete            │
 │ │  • GET    /api/auth/google         → OAuth login       │
 │ │  • GET    /api/auth/google/callback → OAuth callback   │
@@ -72,7 +71,6 @@
 - `POST /api/generations` - Create new generation
 - `GET /api/generations` - List user's generations
 - `GET /api/generations/:id` - Get specific generation
-- `POST /api/generations/:id/regenerate` - Regenerate with new prompt
 - `DELETE /api/generations/:id` - Delete generation
 
 **Image Routes** (`images.ts`):
@@ -89,7 +87,6 @@
 - `createGeneration()` - Create new generation record and queue job
 - `getGenerations()` - Fetch user's generations with sorting
 - `getGenerationById()` - Fetch specific generation
-- `regenerateDesign()` - Update generation and requeue job
 - `deleteGeneration()` - Delete generation and its image
 
 ### 4. Middleware (`src/middleware/`)
@@ -197,19 +194,9 @@ Update Generation (status: success, imageUrl, imageFilename)
 Frontend sees updated status and displays image
 ```
 
-### 3. Regenerate Design
+### 3. Regenerate Design (frontend-only flow)
 
-```
-User modifies prompt → POST /api/generations/:id/regenerate
-    ↓
-Update Generation record with new prompt (status: pending)
-    ↓
-Queue new job (same process as #2)
-    ↓
-Return updated generation
-    ↓
-Frontend polls for completion
-```
+The dedicated `POST /api/generations/:id/regenerate` endpoint was removed on 2026-05-20. The "Regenerate" UX is now a pure prefill: the frontend navigates to `/generate?prompt=…&image=…&style=…&room=…`, the form is repopulated, and submission goes through the standard `POST /api/generations` create path. Each regenerate therefore produces a brand-new `Generation` row rather than mutating the original.
 
 ### 4. Authentication Flow
 
