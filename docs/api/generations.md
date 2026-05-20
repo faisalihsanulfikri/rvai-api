@@ -4,6 +4,8 @@ Base path: `/api/generations`
 
 All endpoints require authentication.
 
+> **Provider note (2026-05-20):** image generation now calls `gemini-2.5-flash-image` directly (paid tier). The async flow, polling, and HTTP contract are unchanged. See [PAID_GEMINI_MIGRATION.md](./PAID_GEMINI_MIGRATION.md) and [SESSION_REVIEW_2026_05_20.md](./SESSION_REVIEW_2026_05_20.md) for the current worker internals.
+
 ## ⚠️ Important: Asynchronous Processing
 
 Image generation is **asynchronous** and uses a background job queue:
@@ -38,6 +40,7 @@ Content-Type: application/json
   "prompt": "Modern minimalist living room with natural light",
   "designId": "507f1f77bcf86cd799439020",
   "style": "minimalist",
+  "room": "living-room",
   "aspectRatio": "16:9",
   "inputImage": "data:image/jpeg;base64,/9j/4AAQSkZJRg..."
 }
@@ -50,8 +53,9 @@ Content-Type: application/json
 | `prompt` | string | ✅ Yes | Design description (non-empty) |
 | `designId` | string | ❌ No | Parent design ID. If omitted, unknown, or not owned by the caller, a new design is created with `firstPrompt = prompt`. |
 | `style` | string | ❌ No | Design style: `minimalist`, `modern`, `industrial`, `japandi` |
-| `aspectRatio` | string | ❌ No | Image ratio: `1:1` (1024×1024), `16:9` (1280×720), `9:16` (720×1280), `4:3` (1024×768). Mapped to Pollinations `width`/`height`. Defaults to `1:1`. |
-| `inputImage` | string | ❌ No | Base64 data URL (`data:image/jpeg;base64,...`, also `image/png` / `image/webp`) of a reference image. Backend describes it with Gemini Vision (free) and feeds the description into Pollinations. Max payload size: 15 MB. |
+| `room` | string | ❌ No | Room type: `living-room`, `bedroom`, `kitchen`, `bathroom`, `home-office`, `dining-room`. Appended to the Gemini prompt as `Room: <Human Label>`. |
+| `aspectRatio` | string | ❌ No | Image ratio: `1:1`, `16:9`, `9:16`, `4:3`. Passed to Gemini's `imageConfig.aspectRatio` for text-to-image. For image-edit (with `inputImage`), Gemini infers dimensions from the source image and this field is ignored. Defaults to `1:1`. |
+| `inputImage` | string | ❌ No | Base64 data URL (`data:image/jpeg;base64,...`, also `image/png` / `image/webp`) of a reference image. Passed to `gemini-2.5-flash-image` as `inlineData` for pixel-faithful image editing. Max payload size: 15 MB. |
 
 **Design resolution**:
 - `designId` present and owned by caller → generation is attached to that design.
@@ -82,15 +86,17 @@ Content-Type: application/json
 2. Creates Generation record with status: `pending`
 3. Queues job in BullMQ
 4. Returns immediately with generation ID
-5. Job processor runs asynchronously (vision-bridge workflow):
-   - If `inputImage` was supplied, calls Gemini (`gemini-2.5-flash`, free tier — vision input) to describe the reference image as text
-   - Composes a final prompt: `Reference scene: <description>\n\nTransform to: <prompt>\n\nStyle: <style>`
-   - Generates the image with Pollinations.ai (free) using `width`/`height` derived from `aspectRatio`
-   - Saves image to filesystem
+5. Job processor runs asynchronously (Gemini direct workflow):
+   - Loads `inputImage` from disk if present and sniffs its real mimetype (PNG/JPEG/WebP)
+   - Calls `gemini-2.5-flash-image` with `contents: [inlineData?, text(finalPrompt)]`
+   - For text-to-image: also sets `imageConfig.aspectRatio` and a deterministic `seed`
+   - For image-edit: omits `seed` and `imageConfig` (Gemini rejects them with `inlineData` present)
+   - Extracts image bytes from `candidates[0].content.parts[].inlineData.data`
+   - Saves image to filesystem with the correct extension based on Gemini's reported mimetype (usually `.png`)
    - Persists the composed `finalPrompt` on the generation record
 6. Frontend polls to check status
 
-> Note: Pollinations is text-to-image only — it never sees the actual reference image. High-level structure (layout, palette, materials) transfers via the text description; fine details will not.
+> Image-edit mode is pixel-faithful — Gemini sees the actual reference image bytes via `inlineData`, not a text description. Trade-off: image-edit calls are not byte-deterministic across runs (Gemini doesn't accept a seed when an `inlineData` part is present).
 
 **Example**:
 ```bash
@@ -198,6 +204,7 @@ Authorization: Bearer <token>
 | `status` | string | `pending`, `processing`, `success`, or `failed` |
 | `errorMessage` | string | Error details if failed (omitted if success) |
 | `style` | string | Design style used |
+| `room` | string | Room type (if specified on the request) |
 | `aspectRatio` | string | Image aspect ratio |
 | `createdAt` | string | ISO 8601 timestamp |
 | `updatedAt` | string | ISO 8601 timestamp |
@@ -493,6 +500,21 @@ pending → processing → success
 | `modern` | Contemporary design with sleek lines |
 | `industrial` | Raw materials, exposed elements |
 | `japandi` | Japanese-scandinavian hybrid |
+
+---
+
+## Room Types
+
+| Room | Sent to Gemini as |
+|------|-------------------|
+| `living-room` | `Room: Living Room` |
+| `bedroom` | `Room: Bedroom` |
+| `kitchen` | `Room: Kitchen` |
+| `bathroom` | `Room: Bathroom` |
+| `home-office` | `Room: Home Office` |
+| `dining-room` | `Room: Dining Room` |
+
+Persisted on the generation record and returned in responses. Wire format is kebab-case to match the existing slug convention; the human-readable label is what reaches the model.
 
 ---
 

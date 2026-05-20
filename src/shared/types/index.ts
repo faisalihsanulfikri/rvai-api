@@ -1,5 +1,12 @@
 export type GenerationStatus = 'pending' | 'processing' | 'success' | 'failed';
 export type DesignStyle = 'minimalist' | 'modern' | 'industrial' | 'japandi';
+export type Room =
+  | 'living-room'
+  | 'bedroom'
+  | 'kitchen'
+  | 'bathroom'
+  | 'home-office'
+  | 'dining-room';
 export type AspectRatio = '1:1' | '16:9' | '9:16' | '4:3';
 
 export interface User {
@@ -32,6 +39,7 @@ export interface Generation {
   status: GenerationStatus;
   errorMessage?: string;
   style?: DesignStyle;
+  room?: Room;
   aspectRatio?: AspectRatio;
   createdAt: Date;
   updatedAt: Date;
@@ -49,6 +57,7 @@ export interface GenerationJob {
   userId: string;
   originalPrompt: string;
   style?: DesignStyle;
+  room?: Room;
   aspectRatio?: AspectRatio;
   inputImageFilename?: string;
 }

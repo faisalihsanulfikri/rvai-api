@@ -1,5 +1,7 @@
 # Image Generation Flow
 
+> **Provider note (2026-05-20):** generation now calls `gemini-2.5-flash-image` directly (paid tier) instead of the Gemini-Vision + Pollinations bridge described below. The async flow, polling, and API contract are unchanged. See [PAID_GEMINI_MIGRATION.md](./PAID_GEMINI_MIGRATION.md) for the current worker internals.
+
 ## Overview
 
 Image generation is **asynchronous** and uses a job queue system:

@@ -7,7 +7,7 @@ export async function createGeneration(
   userId: string,
   data: CreateGenerationRequest
 ) {
-  const { prompt, designId, style, aspectRatio, inputImage } = data;
+  const { prompt, designId, style, room, aspectRatio, inputImage } = data;
 
   if (!prompt || prompt.trim().length === 0) {
     throw new Error('Prompt is required');
@@ -36,6 +36,7 @@ export async function createGeneration(
     finalPrompt: prompt,
     status: 'pending',
     style,
+    room,
     aspectRatio,
     inputImageFilename,
   });
@@ -74,7 +75,7 @@ export async function regenerateDesign(
   userId: string,
   data: RegenerateRequest
 ) {
-  const { prompt, style, aspectRatio, inputImage } = data;
+  const { prompt, style, room, aspectRatio, inputImage } = data;
 
   if (!prompt || prompt.trim().length === 0) {
     throw new Error('Prompt is required');
@@ -97,6 +98,7 @@ export async function regenerateDesign(
   generation.finalPrompt = prompt;
   generation.status = 'pending';
   if (style) generation.style = style;
+  if (room) generation.room = room;
   if (aspectRatio) generation.aspectRatio = aspectRatio;
 
   await generation.save();

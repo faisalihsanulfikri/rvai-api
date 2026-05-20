@@ -26,6 +26,7 @@ export async function create(req: Request, res: Response) {
       userId,
       originalPrompt: data.prompt,
       style: data.style,
+      room: data.room,
       aspectRatio: data.aspectRatio,
       inputImageFilename: generation.inputImageFilename,
     });
@@ -68,6 +69,7 @@ export async function listByUser(req: Request, res: Response) {
         status: g.status,
         errorMessage: g.errorMessage,
         style: g.style,
+        room: g.room,
         aspectRatio: g.aspectRatio,
         createdAt: g.createdAt,
         updatedAt: g.updatedAt,
@@ -100,6 +102,7 @@ export async function getById(req: Request, res: Response) {
       status: generation.status,
       errorMessage: generation.errorMessage,
       style: generation.style,
+      room: generation.room,
       aspectRatio: generation.aspectRatio,
       createdAt: generation.createdAt,
       updatedAt: generation.updatedAt,
@@ -133,6 +136,7 @@ export async function regenerate(req: Request, res: Response) {
       userId,
       originalPrompt: data.prompt,
       style: data.style,
+      room: data.room,
       aspectRatio: data.aspectRatio,
       inputImageFilename: generation.inputImageFilename,
     });

@@ -1,7 +1,7 @@
 # Deterministic Generation (Vision-Bridge Stabilization)
 
 **Date**: 2026-05-19 (session 3)
-**Status**: Implemented
+**Status**: Contract still holds. As of 2026-05-20 the implementation moved from Pollinations `&seed=` to Gemini `config.seed` — see [PAID_GEMINI_MIGRATION.md](./PAID_GEMINI_MIGRATION.md). Sections below describe the pre-migration internals.
 **Scope**: [src/modules/generations/ai.service.ts](../../src/modules/generations/ai.service.ts) only
 
 ---

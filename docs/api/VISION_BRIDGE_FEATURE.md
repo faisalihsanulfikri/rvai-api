@@ -1,7 +1,7 @@
 # Vision-Bridge Generation Feature
 
 **Date**: 2026-05-19 (session 2)
-**Status**: ✅ Implemented
+**Status**: ⚠️ Superseded on 2026-05-20 — see [PAID_GEMINI_MIGRATION.md](./PAID_GEMINI_MIGRATION.md). The code now calls `gemini-2.5-flash-image` directly; this document is kept for history.
 **Scope**: `inputImage` payload support + aspect ratio mapping, all free-tier
 
 ---

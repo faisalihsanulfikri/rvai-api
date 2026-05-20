@@ -1,16 +1,8 @@
-import { GoogleGenAI } from '@google/genai';
+import { GoogleGenAI, Modality } from '@google/genai';
 import { createHash } from 'crypto';
-import { AspectRatio, DesignStyle } from '../../shared/types/index.js';
+import { AspectRatio, DesignStyle, Room } from '../../shared/types/index.js';
 
-const VISION_MODEL = process.env.GEMINI_VISION_MODEL || 'gemini-2.5-flash';
-const POLLINATIONS_BASE = 'https://image.pollinations.ai/prompt';
-
-const ASPECT_RATIO_DIMENSIONS: Record<AspectRatio, { width: number; height: number }> = {
-  '1:1': { width: 1024, height: 1024 },
-  '16:9': { width: 1280, height: 720 },
-  '9:16': { width: 720, height: 1280 },
-  '4:3': { width: 1024, height: 768 },
-};
+const IMAGE_MODEL = process.env.GEMINI_IMAGE_MODEL || 'gemini-2.5-flash-image';
 
 let client: GoogleGenAI | null = null;
 
@@ -34,67 +26,41 @@ export interface GenerateImageOptions {
   prompt: string;
   aspectRatio?: AspectRatio;
   style?: DesignStyle;
+  room?: Room;
   inputImage?: InputImage;
 }
 
 export interface GenerateImageResult {
   buffer: Buffer;
   finalPrompt: string;
+  mimeType: string;
 }
 
-async function describeInputImage(image: InputImage): Promise<string> {
-  const ai = getClient();
-  const response = await ai.models.generateContent({
-    model: VISION_MODEL,
-    config: {
-      temperature: 0,
-      topP: 0,
-    },
-    contents: [
-      {
-        role: 'user',
-        parts: [
-          { inlineData: { mimeType: image.mimeType, data: image.data } },
-          {
-            text:
-              'You are an expert interior-design analyst. Describe only what is clearly visible in the image. ' +
-              'If a field is not clearly visible, write "unknown" for that field. Do not invent or assume details that are not present.\n\n' +
-              'Output exactly this format. One line per field, no extra text, no preamble, no commentary:\n' +
-              'Room: <type>\n' +
-              'Layout: <short phrase>\n' +
-              'Walls: <color and material>\n' +
-              'Floor: <material and color>\n' +
-              'Lighting: <natural/artificial, warm/cool>\n' +
-              'Furniture: <3-5 key pieces>\n' +
-              'Palette: <3-4 dominant colors>\n' +
-              'Mood: <one adjective phrase>',
-          },
-        ],
-      },
-    ],
-  });
-
-  const text =
-    response.text ??
-    response.candidates?.[0]?.content?.parts?.find((p: any) => typeof p?.text === 'string')?.text;
-
-  if (!text || !text.trim()) {
-    throw new Error('Gemini vision returned no description');
-  }
-  return text.trim();
-}
+const ROOM_LABELS: Record<Room, string> = {
+  'living-room': 'Living Room',
+  'bedroom': 'Bedroom',
+  'kitchen': 'Kitchen',
+  'bathroom': 'Bathroom',
+  'home-office': 'Home Office',
+  'dining-room': 'Dining Room',
+};
 
 function buildFinalPrompt(opts: {
   prompt: string;
   style?: DesignStyle;
-  description?: string;
+  room?: Room;
+  hasInputImage: boolean;
 }): string {
   const parts: string[] = [];
-  if (opts.description) {
-    parts.push(`Reference scene: ${opts.description}`);
-    parts.push(`Transform to: ${opts.prompt}`);
-  } else {
-    parts.push(opts.prompt);
+  if (opts.hasInputImage) {
+    parts.push(
+      'Edit the attached interior reference image. Preserve room geometry, camera angle, and the overall layout. ' +
+      'Apply the following change:'
+    );
+  }
+  parts.push(opts.prompt);
+  if (opts.room) {
+    parts.push(`Room: ${ROOM_LABELS[opts.room]}`);
   }
   if (opts.style) {
     parts.push(`Style: ${opts.style}`);
@@ -104,25 +70,65 @@ function buildFinalPrompt(opts: {
 
 function computeSeed(finalPrompt: string, aspectRatio: AspectRatio): number {
   const hash = createHash('sha256').update(`${aspectRatio}|${finalPrompt}`).digest();
-  return hash.readUInt32BE(0);
+  return hash.readInt32BE(0);
 }
 
 export async function generateImageBuffer(options: GenerateImageOptions): Promise<GenerateImageResult> {
-  const { prompt, style, inputImage, aspectRatio } = options;
-
-  const description = inputImage ? await describeInputImage(inputImage) : undefined;
-  const finalPrompt = buildFinalPrompt({ prompt, style, description });
+  const { prompt, style, room, inputImage, aspectRatio } = options;
 
   const ratio = aspectRatio ?? '1:1';
-  const dims = ASPECT_RATIO_DIMENSIONS[ratio];
+  const finalPrompt = buildFinalPrompt({ prompt, style, room, hasInputImage: !!inputImage });
   const seed = computeSeed(finalPrompt, ratio);
-  const url = `${POLLINATIONS_BASE}/${encodeURIComponent(finalPrompt)}?width=${dims.width}&height=${dims.height}&seed=${seed}&nologo=true`;
 
-  const response = await fetch(url);
-  if (!response.ok) {
-    throw new Error(`Pollinations failed: ${response.status} ${response.statusText}`);
+  const parts: Array<{ text?: string; inlineData?: { mimeType: string; data: string } }> = [];
+  if (inputImage) {
+    parts.push({ inlineData: { mimeType: inputImage.mimeType, data: inputImage.data } });
+  }
+  parts.push({ text: finalPrompt });
+
+  const config: {
+    responseModalities: Modality[];
+    seed?: number;
+    imageConfig?: { aspectRatio: AspectRatio };
+  } = {
+    responseModalities: [Modality.IMAGE, Modality.TEXT],
+  };
+  if (inputImage) {
+    const inputBase64Bytes = inputImage.data.length;
+    const inputRawBytes = Math.floor((inputBase64Bytes * 3) / 4);
+    console.log(
+      `Gemini input image: mimeType=${inputImage.mimeType}, base64 size=${inputBase64Bytes} chars (~${(inputRawBytes / 1024 / 1024).toFixed(2)} MB raw)`
+    );
+  } else {
+    config.seed = seed;
+    config.imageConfig = { aspectRatio: ratio };
   }
 
-  const arrayBuffer = await response.arrayBuffer();
-  return { buffer: Buffer.from(arrayBuffer), finalPrompt };
+  const ai = getClient();
+  let response;
+  try {
+    response = await ai.models.generateContent({
+      model: IMAGE_MODEL,
+      contents: [{ role: 'user', parts }],
+      config,
+    });
+  } catch (err) {
+    const detail = (err as any)?.response?.data ?? (err as any)?.cause ?? (err as any)?.message;
+    console.error('Gemini generateContent failed:', JSON.stringify(detail, null, 2));
+    throw err;
+  }
+
+  const imagePart = response.candidates?.[0]?.content?.parts?.find(
+    (p: any) => p?.inlineData?.data
+  );
+  const data = imagePart?.inlineData?.data;
+  if (!data) {
+    const blockReason = response.promptFeedback?.blockReason;
+    throw new Error(
+      `Gemini image generation returned no image${blockReason ? ` (blocked: ${blockReason})` : ''}`
+    );
+  }
+
+  const mimeType = imagePart?.inlineData?.mimeType ?? 'image/png';
+  return { buffer: Buffer.from(data, 'base64'), finalPrompt, mimeType };
 }

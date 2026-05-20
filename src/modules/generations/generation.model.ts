@@ -40,6 +40,10 @@ const generationSchema = new Schema<GenerationDocument>(
       type: String,
       enum: ['minimalist', 'modern', 'industrial', 'japandi'],
     },
+    room: {
+      type: String,
+      enum: ['living-room', 'bedroom', 'kitchen', 'bathroom', 'home-office', 'dining-room'],
+    },
     aspectRatio: {
       type: String,
       enum: ['1:1', '16:9', '9:16', '4:3'],

@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { getImageBuffer } from './image.service.js';
+import { detectMimeFromBuffer } from '../generations/image-storage.service.js';
 
 export async function serveImage(req: Request, res: Response) {
   try {
@@ -11,7 +12,7 @@ export async function serveImage(req: Request, res: Response) {
     }
 
     const buffer = await getImageBuffer(filename);
-    res.type('image/jpeg');
+    res.type(detectMimeFromBuffer(buffer));
     res.send(buffer);
   } catch (error) {
     console.error('Error serving image:', error);

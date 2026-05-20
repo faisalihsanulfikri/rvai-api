@@ -32,14 +32,16 @@ docs/api/
 │  ├── generations.md                # Endpoints documentation
 │  ├── images.md                     # Image serving & storage
 │  ├── GENERATION_FLOW.md            # Complete async flow guide
-│  ├── VISION_BRIDGE_FEATURE.md      # inputImage + aspect ratio (vision-bridge)
-│  ├── DETERMINISTIC_GENERATION.md   # Same inputs → same image (temp 0 + seeded Pollinations)
+│  ├── PAID_GEMINI_MIGRATION.md      # ⭐ Current provider: gemini-2.5-flash-image (direct img2img)
+│  ├── VISION_BRIDGE_FEATURE.md      # Historical: inputImage via Gemini Vision + Pollinations
+│  ├── DETERMINISTIC_GENERATION.md   # Same inputs → same image (now via Gemini config.seed)
 │  ├── MULTIPART_UPLOAD_SUPPORT.md   # multipart/form-data on POST + regenerate
 │  └── HUGGINGFACE_PROVIDER.md       # HuggingFace as alternative provider (img2img)
 │
 └── SESSION & REVIEWS
    ├── SESSION_REVIEW_2026_05_18.md  # Auth refactor session
    ├── SESSION_REVIEW_2026_05_19.md  # Worker fix + URL update + prompt removal
+   ├── SESSION_REVIEW_2026_05_20.md  # ⭐ Paid Gemini migration + mime fix + room field + retry semantics
    ├── WORKER_FIX.md                 # BullMQ worker fix details
    └── INDEX.md                      # This file
 ```
@@ -73,7 +75,14 @@ docs/api/
 4. **[SESSION_REVIEW_2026_05_18.md](./SESSION_REVIEW_2026_05_18.md)** — Architecture details
 
 ### "I want to know what changed"
-👉 **[DETERMINISTIC_GENERATION.md](./DETERMINISTIC_GENERATION.md)** (Latest)
+👉 **[SESSION_REVIEW_2026_05_20.md](./SESSION_REVIEW_2026_05_20.md)** (Latest)
+- Vision-bridge → `gemini-2.5-flash-image` direct migration
+- Four Gemini API quirks discovered in production (seed type, temperature, responseModalities, seed+inlineData)
+- PNG-saved-as-JPG mimetype bug fixed via magic-byte detection
+- Worker no longer flashes `failed` status during BullMQ retries
+- New `room` enum field on generations (6 values)
+
+👉 **[DETERMINISTIC_GENERATION.md](./DETERMINISTIC_GENERATION.md)**
 - Same image + same prompt + same style + same aspect ratio now produces an identical image
 - Gemini Vision pinned to `temperature: 0`, `topP: 0`, with a role-anchored / anti-hallucination / structured-output prompt
 - Pollinations seeded with `sha256(aspectRatio + finalPrompt)` → uint32

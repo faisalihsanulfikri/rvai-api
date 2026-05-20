@@ -6,7 +6,7 @@ import {
   saveImage,
   getImageUrl,
   getImageBuffer,
-  getMimeTypeForFilename,
+  detectMimeFromBuffer,
 } from './image-storage.service.js';
 
 const redisUrl = process.env.REDIS_URL || 'redis://localhost:6379';
@@ -19,7 +19,7 @@ export async function startWorker() {
   const worker = new Worker<GenerationJob>(
     'image-generation',
     async (job) => {
-      const { generationId, originalPrompt, style, aspectRatio, inputImageFilename } = job.data;
+      const { generationId, originalPrompt, style, room, aspectRatio, inputImageFilename } = job.data;
 
       try {
         await updateGenerationStatus(generationId, { status: 'processing' });
@@ -28,18 +28,19 @@ export async function startWorker() {
         if (inputImageFilename) {
           const buffer = await getImageBuffer(inputImageFilename);
           inputImage = {
-            mimeType: getMimeTypeForFilename(inputImageFilename),
+            mimeType: detectMimeFromBuffer(buffer),
             data: buffer.toString('base64'),
           };
         }
 
-        const { buffer: imageBuffer, finalPrompt } = await generateImageBuffer({
+        const { buffer: imageBuffer, finalPrompt, mimeType } = await generateImageBuffer({
           prompt: originalPrompt,
           style,
+          room,
           aspectRatio,
           inputImage,
         });
-        const filename = await saveImage(imageBuffer);
+        const filename = await saveImage(imageBuffer, { mimeType });
         const imageUrl = getImageUrl(filename);
 
         await updateGenerationStatus(generationId, {
@@ -52,15 +53,25 @@ export async function startWorker() {
         console.log(`✓ Generation ${generationId} completed`);
         return { success: true, imageUrl };
       } catch (error) {
-        console.error(`✗ Generation ${generationId} failed:`, error);
+        const attempt = job.attemptsMade + 1;
+        const maxAttempts = job.opts.attempts ?? 1;
+        const isFinalAttempt = attempt >= maxAttempts;
 
         const errorMessage =
           error instanceof Error ? error.message : 'Unknown error occurred';
 
-        await updateGenerationStatus(generationId, {
-          status: 'failed',
-          errorMessage,
-        });
+        if (isFinalAttempt) {
+          console.error(`✗ Generation ${generationId} failed after ${attempt} attempts:`, error);
+          await updateGenerationStatus(generationId, {
+            status: 'failed',
+            errorMessage,
+          });
+        } else {
+          console.warn(
+            `↻ Generation ${generationId} attempt ${attempt}/${maxAttempts} failed, retrying:`,
+            errorMessage
+          );
+        }
 
         throw error;
       }
