@@ -8,7 +8,38 @@ Welcome to the RoomVision AI documentation! Start here to find the right guide f
 
 **Just updated!** Check out the recent improvements:
 
-0. **[SIDEBAR_FORM_REGENERATE_UPDATES.md](./SIDEBAR_FORM_REGENERATE_UPDATES.md)** - LATEST (v0.5.4) ✨
+0. **[LANDING_PAGE.md](./LANDING_PAGE.md)** - LATEST (v0.7.0) 🏡
+   - New public landing page at `/` (hero, "Our Work Procedure", "Who We Are", showcase, final CTA, footer) — warm beige palette inspired by the reference mockup
+   - Generate app moved from `/` → `/generate`; middleware now allows `/` without auth
+   - Header gained a "Home" link; "Sign in" button now routes to `/login` instead of jumping straight into OAuth
+   - Login success and already-logged-in redirects updated to `/generate`
+   - Stats bar: **4** Design styles · **6** Room types · **30s** Avg generation · **∞** Iterations
+   - Known follow-up: `design-setup.tsx` only exposes 3 room chips today (data model has 6)
+
+0. **[SESSION_SUMMARY_2026_05_20.md](./SESSION_SUMMARY_2026_05_20.md)** - (v0.6.1) 🧩
+   - Gallery → Generate regenerate now pre-fills the image, Room chip, Style chip, and notes (formResetKey remount fix)
+   - `room` plumbed end-to-end: `Generation.room`, `generations.create/regenerate` payloads, optimistic records, regenerate links, API docs
+   - Frontend stopped composing prompts — sends raw notes only; backend now owns the `{style}-style {room}. …` template
+   - Room slugs switched to hyphenated form (`living-room`, `home-office`, `dining-room`)
+   - Room + Style badges under the image in both chat messages and gallery cards
+   - Generic error copy ("We hit a technical issue…") replaces raw API JSON in three render sites
+   - Design switching refetches generations on cache miss; no more stranding on the "Set up your design" wizard
+   - Favicon (`app/icon.svg`) now matches the navbar Sparkles logo
+
+0. **[NICHE_DESIGN_SETUP.md](./NICHE_DESIGN_SETUP.md)** - (v0.6.0) 🏠
+   - New structured **Design Setup** empty state — photo dropzone + room/style chips
+   - `PromptInput` now carries `roomType`, `style`, `mode` end-to-end
+   - First-generation prompt composed from structured fields (no more hardcoded `'japandi'`)
+   - Chat preview no longer forced to 16:9 — renders at the image's natural aspect ratio
+   - Caveat: "preserve layout" is still prompt-only; real img2img/segmentation is the next backend step
+
+0. **[CHAT_REFERENCE_LOADING_FIXES.md](./CHAT_REFERENCE_LOADING_FIXES.md)** - (v0.5.5) 💬
+   - Chat bubble shows `originalPrompt` (raw user text) instead of `finalPrompt`
+   - New Copy icon button under each prompt bubble
+   - `stringToFile` helper sends the reference image on the regenerate flow too (remote URL → fetched → `File` part)
+   - Prompt form is only disabled when the *currently visible* design has an in-flight generation — switching to a fresh design re-enables it
+
+0. **[SIDEBAR_FORM_REGENERATE_UPDATES.md](./SIDEBAR_FORM_REGENERATE_UPDATES.md)** - (v0.5.4) ✨
    - Sidebar design titles truncate to a single line
    - "All chats" collapse/expand toggle for the design list
    - Prompt form auto-clears when switching to a different design (or "+ New Design")
@@ -289,7 +320,9 @@ Welcome to the RoomVision AI documentation! Start here to find the right guide f
 
 | Doc | Last Updated | Status |
 |-----|--------------|--------|
-| SIDEBAR_FORM_REGENERATE_UPDATES | 2026-05-19 | ✅ NEW (v0.5.4) 🌟 START HERE |
+| NICHE_DESIGN_SETUP | 2026-05-20 | ✅ NEW (v0.6.0) 🌟 START HERE |
+| CHAT_REFERENCE_LOADING_FIXES | 2026-05-19 | ✅ Current (v0.5.5) |
+| SIDEBAR_FORM_REGENERATE_UPDATES | 2026-05-19 | ✅ Current (v0.5.4) |
 | DESIGNS_SIDEBAR_UPDATE | 2026-05-19 | ✅ Current (v0.5.3) |
 | AUTH_AND_API_FIXES | 2026-05-19 | ✅ Current (v0.5.2) |
 | IMPLEMENTATION_SUMMARY | 2026-05-19 | ✅ Current (v0.5.1) |
