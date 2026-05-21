@@ -76,7 +76,7 @@ export async function startWorker() {
         throw error;
       }
     },
-    { connection: { url: redisUrl } }
+    { connection: { url: redisUrl }, concurrency: 5 }
   );
 
   worker.on('completed', (job) => {
